@@ -56,179 +56,6 @@ static BOOL EnableDlgItem(HWND hWnd,int id,BOOL bEnable)
   return EnableWindow(hCtrlWnd,bEnable);
 }
 
-static void SetVideoCodecInfo(HWND hWndDlg,HIC codec)
-{
-  TCHAR buffer[256];
-
-  if(codec)
-  {
-    ICINFO info;
-    ZeroMemory(&info,sizeof(info));
-    ICGetInfo(codec,&info,sizeof(info));
-
-    _sntprintf(buffer,sizeof(buffer)/sizeof(*buffer),_T("Video codec: %S"),info.szDescription);
-    buffer[255] = 0;
-  }
-  else
-    _tcscpy(buffer,_T("Video codec: (uncompressed)"));
-
-  SetDlgItemText(hWndDlg,IDC_VIDEOCODEC,buffer);
-}
-
-static DWORD RegQueryDWord(HKEY hk,LPCTSTR name,DWORD defValue)
-{
-  DWORD value,typeCode,size=sizeof(DWORD);
-
-  if(!hk || !RegQueryValueEx(hk,name,0,&typeCode,(LPBYTE) &value,&size) == ERROR_SUCCESS
-    || typeCode != REG_DWORD && size != sizeof(DWORD))
-    value = defValue;
-
-  return value;
-}
-
-static void RegSetDWord(HKEY hk,LPCTSTR name,DWORD value)
-{
-  RegSetValueEx(hk,name,0,REG_DWORD,(LPBYTE) &value,sizeof(DWORD));
-}
-
-static void LoadSettingsFromRegistry()
-{
-  HKEY hk = 0;
-
-  if(RegOpenKeyEx(HKEY_CURRENT_USER,RegistryKeyName,0,KEY_READ,&hk) != ERROR_SUCCESS)
-    hk = 0;
-
-  Params.FrameRateNum = RegQueryDWord(hk,_T("FrameRate"),6000);
-  Params.FrameRateDenom = RegQueryDWord(hk,_T("FrameRateDenom"),100);
-  Params.Encoder = (EncoderType) RegQueryDWord(hk,_T("VideoEncoder"),AVIEncoderVFW);
-  Params.VideoCodec = RegQueryDWord(hk,_T("AVIVideoCodec"),mmioFOURCC('D','I','B',' '));
-  Params.VideoQuality = RegQueryDWord(hk,_T("AVIVideoQuality"),ICQUALITY_DEFAULT);
-  Params.NewIntercept = TRUE; // always use new interception now.
-  Params.SoundsysInterception = RegQueryDWord(hk,_T("SoundsysInterception"),1);
-  Params.EnableAutoSkip = RegQueryDWord(hk,_T("EnableAutoSkip"),0);
-  Params.FirstFrameTimeout = RegQueryDWord(hk,_T("FirstFrameTimeout"),1000);
-  Params.FrameTimeout = RegQueryDWord(hk,_T("FrameTimeout"),500);
-  Params.UseEncoderThread = RegQueryDWord(hk,_T("UseEncoderThread"),0);
-  Params.EnableGDICapture = RegQueryDWord(hk,_T("EnableGDICapture"),0);
-  Params.FrequentTimerCheck = RegQueryDWord(hk,_T("FrequentTimerCheck"),1);
-  Params.VirtualFramebuffer = RegQueryDWord(hk,_T("VirtualFramebuffer"),0);
-
-  if(hk)
-    RegCloseKey(hk);
-}
-
-static void SaveSettingsToRegistry()
-{
-  HKEY hk;
-
-  if(RegCreateKeyEx(HKEY_CURRENT_USER,RegistryKeyName,0,0,0,KEY_ALL_ACCESS,0,&hk,0) == ERROR_SUCCESS)
-  {
-    RegSetDWord(hk,_T("FrameRate"),Params.FrameRateNum);
-    RegSetDWord(hk,_T("FrameRateDenom"),Params.FrameRateDenom);
-    RegSetDWord(hk,_T("VideoEncoder"),Params.Encoder);
-    RegSetDWord(hk,_T("AVIVideoCodec"),Params.VideoCodec);
-    RegSetDWord(hk,_T("AVIVideoQuality"),Params.VideoQuality);
-    RegSetDWord(hk,_T("NewIntercept"),Params.NewIntercept);
-    RegSetDWord(hk,_T("SoundsysInterception"),Params.SoundsysInterception);
-    RegSetDWord(hk,_T("EnableAutoSkip"),Params.EnableAutoSkip);
-    RegSetDWord(hk,_T("FirstFrameTimeout"),Params.FirstFrameTimeout);
-    RegSetDWord(hk,_T("FrameTimeout"),Params.FrameTimeout);
-    RegSetDWord(hk,_T("UseEncoderThread"),Params.UseEncoderThread);
-    RegSetDWord(hk,_T("FrequentTimerCheck"),Params.FrequentTimerCheck);
-    RegSetDWord(hk,_T("VirtualFramebuffer"),Params.VirtualFramebuffer);
-    RegCloseKey(hk);
-  }
-}
-
-static int IntPow(int a,int b)
-{
-  int x = 1;
-  while(b-- > 0)
-    x *= a;
-
-  return x;
-}
-
-// log10(x) if x is a nonnegative power of 10, -1 otherwise
-static int GetPowerOf10(int x)
-{
-  int power = 0;
-  while((x % 10) == 0)
-  {
-    power++;
-    x /= 10;
-  }
-
-  return (x == 1) ? power : -1;
-}
-
-static void FormatRational(TCHAR *buffer,int nChars,int num,int denom)
-{
-  int d10 = GetPowerOf10(denom);
-  if(d10 != -1) // decimal power
-    _sntprintf(buffer,nChars,"%d.%0*d",num/denom,d10,num%denom);
-  else // general rational
-    _sntprintf(buffer,nChars,"%d/%d",num,denom);
-
-  buffer[nChars-1] = 0;
-}
-
-static bool ParsePositiveRational(const TCHAR *buffer,int &num,int &denom)
-{
-  TCHAR *end;
-  long intPart = _tcstol(buffer,&end,10);
-  if(intPart < 0 || end == buffer)
-    return false;
-
-  if(*end == 0)
-  {
-    num = intPart;
-    denom = 1;
-    return num > 0;
-  }
-  else if(*end == '.') // decimal notation
-  {
-    end++;
-    int digits = 0;
-    while(end[digits] >= '0' && end[digits] <= '9')
-      digits++;
-
-    if(!digits || end[digits] != 0) // invalid character in digit string
-      return false;
-
-    denom = IntPow(10,digits);
-    long fracPart = _tcstol(end,&end,10);
-    if(intPart > (LONG_MAX - fracPart) / denom) // overflow
-      return false;
-
-    num = intPart * denom + fracPart;
-    return true;
-  }
-  else if(*end == '/') // rational number
-  {
-    const TCHAR *rest = end + 1;
-    num = intPart;
-    denom = _tcstol(rest,&end,10);
-    return (denom > 0) && (end != rest) && *end == 0;
-  }
-  else // invalid character
-    return false;
-}
-
-static void SetDefaultAVIName(HWND hWndDlg)
-{
-  // set demo .avi file name if not yet set
-  TCHAR drive[_MAX_DRIVE],dir[_MAX_DIR],fname[_MAX_FNAME],ext[_MAX_EXT],path[_MAX_PATH];
-  int nChars = GetDlgItemText(hWndDlg,IDC_TARGET,fname,_MAX_FNAME);
-  if(!nChars)
-  {
-    GetDlgItemText(hWndDlg,IDC_DEMO,path,COUNTOF(path));
-    _tsplitpath(path,drive,dir,fname,ext);
-    _tmakepath(path,drive,dir,fname,_T(".avi"));
-    SetDlgItemText(hWndDlg,IDC_TARGET,path);
-  }
-}
-
 static LRESULT CALLBACK EditBoxSubProc(HWND hWnd,UINT msg,WPARAM wParam,LPARAM lParam)
 {
   TCHAR buffer[_MAX_PATH];
@@ -242,13 +69,11 @@ static LRESULT CALLBACK EditBoxSubProc(HWND hWnd,UINT msg,WPARAM wParam,LPARAM l
     if(DragQueryFile(drop,0,buffer,COUNTOF(buffer)))
     {
       SetWindowTextA(hWnd,buffer);
-      if(GetWindowLongPtr(hWnd,GWLP_ID) == IDC_DEMO)
-        SetDefaultAVIName(GetParent(hWnd));
     }
     DragFinish(drop);
     return 0;
   }
-  
+
   return CallWindowProc(chain,hWnd,msg,wParam,lParam);
 }
 
@@ -271,55 +96,6 @@ static INT_PTR CALLBACK MainDialogProc(HWND hWndDlg,UINT uMsg,WPARAM wParam,LPAR
       GetWindowRect(hWndDlg,&rcDlg);
       SetWindowPos(hWndDlg,0,(rcWork.left+rcWork.right-rcDlg.right+rcDlg.left)/2,
         (rcWork.top+rcWork.bottom-rcDlg.bottom+rcDlg.top)/2,-1,-1,SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-
-      // load settings from registry (or get default settings)
-      LoadSettingsFromRegistry();
-
-      // set gui values
-      TCHAR buffer[32];
-      FormatRational(buffer,32,Params.FrameRateNum,Params.FrameRateDenom);
-      SetDlgItemText(hWndDlg,IDC_FRAMERATE,buffer);
-
-      _stprintf(buffer,"%d.%02d",Params.FirstFrameTimeout/1000,(Params.FirstFrameTimeout/10)%100);
-      SetDlgItemText(hWndDlg,IDC_FIRSTFRAMETIMEOUT,buffer);
-
-      _stprintf(buffer,"%d.%02d",Params.FrameTimeout/1000,(Params.FrameTimeout/10)%100);
-      SetDlgItemText(hWndDlg,IDC_OTHERFRAMETIMEOUT,buffer);
-
-      SendDlgItemMessage(hWndDlg,IDC_ENCODER,CB_ADDSTRING,0,(LPARAM) ".BMP/.WAV writer");
-      SendDlgItemMessage(hWndDlg,IDC_ENCODER,CB_ADDSTRING,0,(LPARAM) ".AVI (VfW, segmented)");
-      SendDlgItemMessage(hWndDlg,IDC_ENCODER,CB_ADDSTRING,0,(LPARAM) ".AVI (DirectShow, *unstable*)");
-      SendDlgItemMessage(hWndDlg,IDC_ENCODER,CB_SETCURSEL,Params.Encoder - 1,0);
-
-      EnableDlgItem(hWndDlg,IDC_VIDEOCODEC,Params.Encoder != BMPEncoder);
-      EnableDlgItem(hWndDlg,IDC_VCPICK,Params.Encoder != BMPEncoder);
-
-      CheckDlgButton(hWndDlg,IDC_AUTOSKIP_TIMER,Params.FrequentTimerCheck ? BST_CHECKED : BST_UNCHECKED);
-
-      if(Params.EnableAutoSkip)
-        CheckDlgButton(hWndDlg,IDC_AUTOSKIP,BST_CHECKED);
-      else
-      {
-        EnableDlgItem(hWndDlg,IDC_FIRSTFRAMETIMEOUT,FALSE);
-        EnableDlgItem(hWndDlg,IDC_OTHERFRAMETIMEOUT,FALSE);
-      }
-
-      CheckDlgButton(hWndDlg,IDC_SOUNDSYS,Params.SoundsysInterception ? BST_CHECKED : BST_UNCHECKED);
-      CheckDlgButton(hWndDlg,IDC_ENCODERTHREAD,Params.UseEncoderThread ? BST_CHECKED : BST_UNCHECKED);
-      CheckDlgButton(hWndDlg,IDC_CAPTUREGDI,Params.EnableGDICapture ? BST_CHECKED : BST_UNCHECKED);
-      CheckDlgButton(hWndDlg,IDC_VIRTFRAMEBUF,Params.VirtualFramebuffer ? BST_CHECKED : BST_UNCHECKED);
-
-      EditBoxEnableDragDrop(GetDlgItem(hWndDlg,IDC_DEMO));
-      EditBoxEnableDragDrop(GetDlgItem(hWndDlg,IDC_TARGET));
-
-      HIC codec = ICOpen(ICTYPE_VIDEO,Params.VideoCodec,ICMODE_QUERY);
-      SetVideoCodecInfo(hWndDlg,codec);
-      ICClose(codec);
-
-      // gui stuff not read from registry
-      CheckDlgButton(hWndDlg,IDC_VCAPTURE,BST_CHECKED);
-      CheckDlgButton(hWndDlg,IDC_ACAPTURE,BST_CHECKED);
-      CheckDlgButton(hWndDlg,IDC_SLEEPLAST,BST_CHECKED);
     }
     return TRUE;
 
@@ -332,21 +108,10 @@ static INT_PTR CALLBACK MainDialogProc(HWND hWndDlg,UINT uMsg,WPARAM wParam,LPAR
 
     case IDOK:
       {
-        TCHAR frameRateStr[64];
-        TCHAR firstFrameTimeout[64];
-        TCHAR otherFrameTimeout[64];
-
         Params.VersionTag = PARAMVERSION;
 
-        // get values
         GetDlgItemText(hWndDlg,IDC_DEMO,ExeName,_MAX_PATH);
         GetDlgItemText(hWndDlg,IDC_ARGUMENTS,Arguments,MAX_ARGS);
-        GetDlgItemText(hWndDlg,IDC_TARGET,Params.FileName,_MAX_PATH);
-        GetDlgItemText(hWndDlg,IDC_FRAMERATE,frameRateStr,sizeof(frameRateStr)/sizeof(*frameRateStr));
-        GetDlgItemText(hWndDlg,IDC_FIRSTFRAMETIMEOUT,firstFrameTimeout,sizeof(firstFrameTimeout)/sizeof(*firstFrameTimeout));
-        GetDlgItemText(hWndDlg,IDC_OTHERFRAMETIMEOUT,otherFrameTimeout,sizeof(otherFrameTimeout)/sizeof(*otherFrameTimeout));
-
-        BOOL autoSkip = IsDlgButtonChecked(hWndDlg,IDC_AUTOSKIP) == BST_CHECKED;
 
         // validate everything and fill out parameter block
         HANDLE hFile = CreateFile(ExeName,GENERIC_READ,0,0,OPEN_EXISTING,0,0);
@@ -354,47 +119,6 @@ static INT_PTR CALLBACK MainDialogProc(HWND hWndDlg,UINT uMsg,WPARAM wParam,LPAR
           return !ErrorMsg(_T("You need to specify a valid executable in the 'demo' field."),hWndDlg);
         else
           CloseHandle(hFile);
-
-        int frameRateNum,frameRateDenom;
-        if(!ParsePositiveRational(frameRateStr,frameRateNum,frameRateDenom)
-          || frameRateNum < 0 || frameRateNum / frameRateDenom >= 1000)
-          return !ErrorMsg(_T("Please enter a valid frame rate between 0 and 1000 "
-            "(either as decimal or rational)."),hWndDlg);
-
-        if(autoSkip)
-        {
-          double fft = atof(firstFrameTimeout);
-          if(fft <= 0.0 || fft >= 3600.0)
-            return !ErrorMsg(_T("'Initial frame timeout' must be between 0 and 3600 seconds."),hWndDlg);
-
-          double oft = atof(otherFrameTimeout);
-          if(oft <= 0.0 || oft >= 3600.0)
-            return !ErrorMsg(_T("'Other frames timeout' must be between 0 and 3600 seconds."),hWndDlg);
-
-          Params.FirstFrameTimeout = DWORD(fft*1000);
-          Params.FrameTimeout = DWORD(oft*1000);
-        }
-
-        Params.FrameRateNum = frameRateNum;
-        Params.FrameRateDenom = frameRateDenom;
-        Params.Encoder = (EncoderType) (1 + SendDlgItemMessage(hWndDlg,IDC_ENCODER,CB_GETCURSEL,0,0));
-
-        Params.CaptureVideo = IsDlgButtonChecked(hWndDlg,IDC_VCAPTURE) == BST_CHECKED;
-        Params.CaptureAudio = IsDlgButtonChecked(hWndDlg,IDC_ACAPTURE) == BST_CHECKED;
-        Params.SoundMaxSkip = IsDlgButtonChecked(hWndDlg,IDC_SKIPSILENCE) == BST_CHECKED ? 10 : 0;
-        Params.MakeSleepsLastOneFrame = IsDlgButtonChecked(hWndDlg,IDC_SLEEPLAST) == BST_CHECKED;
-        Params.SleepTimeout = 2500; // yeah, this should be configurable
-        Params.NewIntercept = TRUE; // this doesn't seem to cause *any* problems, while the old interception did.
-        Params.SoundsysInterception = IsDlgButtonChecked(hWndDlg,IDC_SOUNDSYS) == BST_CHECKED;
-        Params.FrequentTimerCheck = IsDlgButtonChecked(hWndDlg,IDC_AUTOSKIP_TIMER) == BST_CHECKED;
-        Params.EnableAutoSkip = autoSkip;
-        Params.PowerDownAfterwards = IsDlgButtonChecked(hWndDlg,IDC_POWERDOWN) == BST_CHECKED;
-        Params.UseEncoderThread = IsDlgButtonChecked(hWndDlg,IDC_ENCODERTHREAD) == BST_CHECKED;
-        Params.EnableGDICapture = IsDlgButtonChecked(hWndDlg,IDC_CAPTUREGDI) == BST_CHECKED;
-        Params.VirtualFramebuffer = IsDlgButtonChecked(hWndDlg,IDC_VIRTFRAMEBUF) == BST_CHECKED;
-
-        // save settings for next time
-        SaveSettingsToRegistry();
 
         // that's it.
         EndDialog(hWndDlg,1);
@@ -420,7 +144,6 @@ static INT_PTR CALLBACK MainDialogProc(HWND hWndDlg,UINT uMsg,WPARAM wParam,LPAR
         if(GetOpenFileName(&ofn))
         {
           SetDlgItemText(hWndDlg,IDC_DEMO,ofn.lpstrFile);
-          SetDefaultAVIName(hWndDlg);
         }
       }
       return TRUE;
@@ -454,43 +177,6 @@ static INT_PTR CALLBACK MainDialogProc(HWND hWndDlg,UINT uMsg,WPARAM wParam,LPAR
 
         EnableDlgItem(hWndDlg,IDC_VIDEOCODEC,allowCodecSelect);
         EnableDlgItem(hWndDlg,IDC_VCPICK,allowCodecSelect);
-      }
-      return TRUE;
-
-    case IDC_VCPICK:
-      {
-        COMPVARS cv;
-        ZeroMemory(&cv,sizeof(cv));
-
-        cv.cbSize = sizeof(cv);
-        cv.dwFlags = ICMF_COMPVARS_VALID;
-        cv.fccType = ICTYPE_VIDEO;
-        cv.fccHandler = Params.VideoCodec;
-        cv.lQ = Params.VideoQuality;
-        if(ICCompressorChoose(hWndDlg,0,0,0,&cv,0))
-        {
-          Params.VideoCodec = cv.fccHandler;
-          Params.VideoQuality = cv.lQ;
-          SetVideoCodecInfo(hWndDlg,cv.hic);
-
-          if(cv.cbState <= sizeof(Params.CodecSpecificData))
-          {
-            Params.CodecDataSize = cv.cbState;
-            memcpy(Params.CodecSpecificData, cv.lpState, cv.cbState);
-          }
-          else
-            Params.CodecDataSize = 0;
-
-          ICCompressorFree(&cv);
-        }
-      }
-      return TRUE;
-
-    case IDC_AUTOSKIP:
-      {
-        BOOL enable = IsDlgButtonChecked(hWndDlg,IDC_AUTOSKIP) == BST_CHECKED;
-        EnableDlgItem(hWndDlg,IDC_FIRSTFRAMETIMEOUT,enable);
-        EnableDlgItem(hWndDlg,IDC_OTHERFRAMETIMEOUT,enable);
       }
       return TRUE;
     }

@@ -26,10 +26,8 @@
 #include <process.h>
 
 #include "video.h"
-#include "videoencoder.h"
 #include "intercept.h"
 
-VideoEncoder *encoder = 0;
 int frameRateScaled = 1000, frameRateDenom = 100;
 bool exitNextFrame = false;
 ParameterBlock params;
@@ -120,46 +118,10 @@ static void done()
     // shutdown hook thread
     PostThreadMessage(HookThreadId,WM_QUIT,0,0);
 
-    VideoEncoder *realEncoder = encoder;
-    encoder = 0;
-
-    doneTiming();
-
-    delete realEncoder;
-
-    doneSound();
+    //doneSound();
     doneVideo();    
 
     printLog("main: everything ok, closing log.\n");
-    if(params.PowerDownAfterwards)
-    {
-      printLog("main: powering system down.\n");
-
-      // get token for this process
-      HANDLE hToken;
-      if(OpenProcessToken(GetCurrentProcess(),TOKEN_ADJUST_PRIVILEGES|TOKEN_QUERY,&hToken))
-      {
-        // get shutdown privilege
-        TOKEN_PRIVILEGES priv;
-        LookupPrivilegeValue(0,SE_SHUTDOWN_NAME,&priv.Privileges[0].Luid);
-        priv.PrivilegeCount = 1;
-        priv.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-
-        AdjustTokenPrivileges(hToken,FALSE,&priv,0,0,0);
-        if(GetLastError() == ERROR_SUCCESS)
-        {
-          if(!ExitWindowsEx(EWX_POWEROFF|EWX_FORCE,SHTDN_REASON_MAJOR_OTHER|SHTDN_REASON_MINOR_OTHER|SHTDN_REASON_FLAG_PLANNED))
-            printLog("main: shutdown command failed.\n");
-        }
-        else
-          printLog("main: failed to acquire shutdown privileges.\n");
-
-        CloseHandle(hToken);
-      }
-      else
-        printLog("main: couldn't acquire process token, can't power off.\n");
-    }
-
     closeLog();
     initialized = false;
   }
@@ -241,28 +203,11 @@ static void init()
   }
 
   // rest of initialization code
-  initTiming(true);
+  //initTiming(true);
   initVideo();
-  initSound();
+  //initSound();
   initProcessIntercept();
   printLog("main: all main components initialized.\n");
-
-  if(error)
-  {
-    printLog("main: couldn't access parameter block or wrong version\n");
-
-    frameRateScaled = 1000;
-    frameRateDenom = 100;
-    encoder = new DummyVideoEncoder;
-  }
-  else
-  {
-    printLog("main: reading parameter block...\n");
-
-    frameRateScaled = params.FrameRateNum;
-    frameRateDenom = params.FrameRateDenom;
-    encoder = 0;
-  }
 
   // install our hook so we get notified of process exit (hopefully)
   HookFunction(&Real_ExitProcess, Mine_ExitProcess);

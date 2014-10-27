@@ -22,8 +22,6 @@
 
 #include "stdafx.h"
 #include "video.h"
-#include "videoencoder.h"
-#include "videocapturetimer.h"
 
 #include <InitGuid.h>
 #include <ddraw.h>
@@ -35,7 +33,11 @@ typedef HRESULT (__stdcall *PDirectDrawCreateEx)(GUID *lpGUID,LPVOID *lplpDD,REF
 
 typedef HRESULT (__stdcall *PQueryInterface)(IUnknown *dd,REFIID iid,LPVOID *ppObj);
 typedef HRESULT (__stdcall *PDDraw_CreateSurface)(IUnknown *dd,LPDDSURFACEDESC ddsd,LPDIRECTDRAWSURFACE *surf,IUnknown *pUnkOuter);
-typedef HRESULT (__stdcall *PDDrawSurface_Blt)(IUnknown *dds,LPRECT destrect,IUnknown *src,LPRECT srcrect,DWORD dwFlags,LPDDBLTFX fx);
+typedef HRESULT (__stdcall *PDDraw_SetCooperativeLevel)(IUnknown *dd,HWND, DWORD);
+typedef HRESULT (__stdcall *PDDraw_SetDisplayMode)(IUnknown *dd, DWORD, DWORD,DWORD);
+typedef HRESULT (__stdcall *PDDraw2_SetDisplayMode)(IUnknown *dd, DWORD, DWORD,DWORD, DWORD, DWORD);
+typedef HRESULT (__stdcall *PDDraw4_SetDisplayMode)(IUnknown *dd, DWORD, DWORD,DWORD, DWORD, DWORD);
+typedef HRESULT (__stdcall *PDDraw7_SetDisplayMode)(IUnknown *dd, DWORD, DWORD,DWORD, DWORD, DWORD);
 typedef HRESULT (__stdcall *PDDrawSurface_Flip)(IUnknown *dds,IUnknown *surf,DWORD flags);
 typedef HRESULT (__stdcall *PDDrawSurface_Lock)(IUnknown *dds,LPRECT rect,LPDDSURFACEDESC desc,DWORD flags,HANDLE hnd);
 typedef HRESULT (__stdcall *PDDrawSurface_Unlock)(IUnknown *dds,void *ptr);
@@ -45,38 +47,41 @@ static PDirectDrawCreateEx Real_DirectDrawCreateEx = 0;
 
 static PQueryInterface Real_DDraw_QueryInterface = 0;
 static PDDraw_CreateSurface Real_DDraw_CreateSurface = 0;
+static PDDraw_SetCooperativeLevel Real_DDraw_SetCooperativeLevel = 0;
+static PDDraw_SetDisplayMode Real_DDraw_SetDisplayMode = 0;
 static PQueryInterface Real_DDrawSurface_QueryInterface = 0;
-static PDDrawSurface_Blt Real_DDrawSurface_Blt = 0;
 static PDDrawSurface_Flip Real_DDrawSurface_Flip = 0;
 static PDDrawSurface_Lock Real_DDrawSurface_Lock = 0;
 static PDDrawSurface_Unlock Real_DDrawSurface_Unlock = 0;
 
 static PQueryInterface Real_DDraw2_QueryInterface = 0;
 static PDDraw_CreateSurface Real_DDraw2_CreateSurface = 0;
+static PDDraw_SetCooperativeLevel Real_DDraw2_SetCooperativeLevel = 0;
+static PDDraw2_SetDisplayMode Real_DDraw2_SetDisplayMode = 0;
 static PQueryInterface Real_DDrawSurface2_QueryInterface = 0;
-static PDDrawSurface_Blt Real_DDrawSurface2_Blt = 0;
 static PDDrawSurface_Flip Real_DDrawSurface2_Flip = 0;
 static PDDrawSurface_Lock Real_DDrawSurface2_Lock = 0;
 static PDDrawSurface_Unlock Real_DDrawSurface2_Unlock = 0;
 
 static PQueryInterface Real_DDrawSurface3_QueryInterface = 0;
-static PDDrawSurface_Blt Real_DDrawSurface3_Blt = 0;
 static PDDrawSurface_Flip Real_DDrawSurface3_Flip = 0;
 static PDDrawSurface_Lock Real_DDrawSurface3_Lock = 0;
 static PDDrawSurface_Unlock Real_DDrawSurface3_Unlock = 0;
 
 static PQueryInterface Real_DDraw4_QueryInterface = 0;
 static PDDraw_CreateSurface Real_DDraw4_CreateSurface = 0;
+static PDDraw_SetCooperativeLevel Real_DDraw4_SetCooperativeLevel = 0;
+static PDDraw4_SetDisplayMode Real_DDraw4_SetDisplayMode = 0;
 static PQueryInterface Real_DDrawSurface4_QueryInterface = 0;
-static PDDrawSurface_Blt Real_DDrawSurface4_Blt = 0;
 static PDDrawSurface_Flip Real_DDrawSurface4_Flip = 0;
 static PDDrawSurface_Lock Real_DDrawSurface4_Lock = 0;
 static PDDrawSurface_Unlock Real_DDrawSurface4_Unlock = 0;
 
 static PQueryInterface Real_DDraw7_QueryInterface = 0;
 static PDDraw_CreateSurface Real_DDraw7_CreateSurface = 0;
+static PDDraw_SetCooperativeLevel Real_DDraw7_SetCooperativeLevel = 0;
+static PDDraw7_SetDisplayMode Real_DDraw7_SetDisplayMode = 0;
 static PQueryInterface Real_DDrawSurface7_QueryInterface = 0;
-static PDDrawSurface_Blt Real_DDrawSurface7_Blt = 0;
 static PDDrawSurface_Flip Real_DDrawSurface7_Flip = 0;
 static PDDrawSurface_Lock Real_DDrawSurface7_Lock = 0;
 static PDDrawSurface_Unlock Real_DDrawSurface7_Unlock = 0;
@@ -87,191 +92,31 @@ static int PrimarySurfaceVersion = 0;
 
 static ULONG DDrawRefCount = 0;
 
-// ---- blit surface handling
-
-static IDirectDrawSurface* GetBlitSurface()
+DWORD dwMultiplier = 4;
+DWORD dwOriginalWidth = 0;
+DWORD dwOriginalHeight = 0;
+HWND hwOriginal = NULL;
+DWORD dwOriginalBPP = 0;
+void ModifyResolution( DWORD* dwWidth, DWORD* dwHeight )
 {
-  IDirectDrawSurface* blitSurface;
+  dwOriginalWidth = *dwWidth;
+  dwOriginalHeight = *dwHeight;
 
-  if(PrimarySurfaceVersion < 4)
+  printLog("current resolution: %d * %d\n",*dwWidth,*dwHeight);
+  if (*dwWidth < 640 || *dwHeight < 480)
   {
-    IDirectDrawSurface *surf = (IDirectDrawSurface *) PrimarySurface;
+    *dwWidth *= dwMultiplier;
+    *dwHeight *= dwMultiplier;
 
-    DDSURFACEDESC ddsd;
-    ZeroMemory(&ddsd,sizeof(ddsd));
-    ddsd.dwSize = sizeof(ddsd);
-    if(FAILED(surf->GetSurfaceDesc(&ddsd)))
-      printLog("video: can't get surface desc\n");
-    else
-    {
-      ddsd.dwWidth = captureWidth;
-      ddsd.dwHeight = captureHeight;
+    SetWindowPos(hwOriginal, 0, 0, 0, *dwWidth, *dwHeight, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE );
+    SetWindowLong(hwOriginal, GWL_STYLE, WS_POPUP | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_VISIBLE );
+    ShowWindow(hwOriginal, SW_SHOW);
+    SetForegroundWindow(hwOriginal);
+    SetFocus(hwOriginal);
 
-      ddsd.dwFlags = DDSD_CAPS | DDSD_WIDTH | DDSD_HEIGHT;
-      ddsd.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY;
-      IDirectDraw *dd = (IDirectDraw *) PrimaryDDraw;
-      if(FAILED(dd->CreateSurface(&ddsd,&blitSurface,0)))
-        printLog("video: could not create blit target\n");
-    }
+    printLog("scaled resolution: %d * %d\n",*dwWidth,*dwHeight);
   }
-  else
-  {
-    IDirectDrawSurface4 *srf4 = (IDirectDrawSurface4 *) PrimarySurface;
-
-    DDSURFACEDESC2 ddsd;
-    ZeroMemory(&ddsd,sizeof(ddsd));
-    ddsd.dwSize = sizeof(ddsd);
-    if(FAILED(srf4->GetSurfaceDesc(&ddsd)))
-      printLog("video: can't get surface desc\n");
-    else
-    {
-      ddsd.dwWidth = captureWidth;
-      ddsd.dwHeight = captureHeight;
-
-      ddsd.dwFlags = DDSD_CAPS | DDSD_WIDTH | DDSD_HEIGHT;
-      ddsd.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY;
-      ddsd.ddsCaps.dwCaps2 = 0;
-      IDirectDraw4 *dd = (IDirectDraw4 *) PrimaryDDraw;
-      if(FAILED(dd->CreateSurface(&ddsd,(IDirectDrawSurface4 **) &blitSurface,0)))
-        printLog("video: could not create blit target\n");
-    }
-  }
-
-  return blitSurface;
 }
-
-// ---- blitter
-
-// this is not meant to be as fast as possible; instead I try to keep it
-// generic and short because blitting itself is not going to be a performance
-// bottleneck anyway.
-class DDrawBlitter : public GenericBlitter
-{
-  void SetFormat(LPDDPIXELFORMAT fmt)
-  {
-    if(fmt->dwFlags & DDPF_PALETTEINDEXED8)
-      SetPalettedFormat(8);
-    else if(fmt->dwFlags & DDPF_RGB)
-      SetRGBFormat(fmt->dwRGBBitCount,fmt->dwRBitMask,fmt->dwGBitMask,fmt->dwBBitMask);
-    else
-      SetInvalidFormat();
-  }
-  
-  void UpdatePalette()
-  {
-    if(IsPaletted() && PrimarySurface)
-    {
-      IDirectDrawPalette *pal = 0;
-      ((IDirectDrawSurface *) PrimarySurface)->GetPalette(&pal);
-
-      if(pal)
-      {
-        PALETTEENTRY entries[256];
-        pal->GetEntries(0,0,256,entries);
-        SetPalette(entries,256);
-        pal->Release();
-      }
-      else
-        printLog("video: couldn't get palette!\n");
-    }
-  }
-
-public:
-  bool SetFormatFromSurface(IUnknown *surfPtr)
-  {
-    IDirectDrawSurface *surf = (IDirectDrawSurface *) surfPtr;
-
-    DDPIXELFORMAT fmt;
-    ZeroMemory(&fmt,sizeof(fmt));
-    fmt.dwSize = sizeof(fmt);
-
-    if(FAILED(surf->GetPixelFormat(&fmt)))
-    {
-      printLog("video: can't get pixel format\n");
-      return false;
-    }
-
-    SetFormat(&fmt);
-    if(IsPaletted())
-      UpdatePalette();
-
-    return true;
-  }
-
-  bool BlitSurfaceToCapture(IDirectDrawSurface *surf,int version)
-  {
-    IDirectDrawSurface* blitSurface = GetBlitSurface();
-    if(!blitSurface || !SetFormatFromSurface(surf))
-      return false;
-
-    // blit backbuffer to our readback surface
-    RECT rc;
-    rc.left = 0;
-    rc.top = 0;
-    rc.right = captureWidth;
-    rc.bottom = captureHeight;
-
-    if(FAILED(blitSurface->Blt(&rc,surf,&rc,DDBLT_WAIT,0)))
-    {
-      printLog("video: blit failed\n");
-      return false;
-    }
-
-    LPBYTE surface;
-    DWORD pitch;
-
-    if(version < 4)
-    {
-      DDSURFACEDESC ddsd;
-      ZeroMemory(&ddsd,sizeof(ddsd));
-      ddsd.dwSize = sizeof(ddsd);
-
-      if(FAILED(blitSurface->Lock(0,&ddsd,DDLOCK_WAIT,0)))
-      {
-        printLog("video: can't lock surface\n");
-        return false;
-      }
-
-      surface = (LPBYTE) ddsd.lpSurface;
-      pitch = ddsd.lPitch;
-    }
-    else
-    {
-      IDirectDrawSurface4 *srf4 = (IDirectDrawSurface4 *) blitSurface;
-
-      DDSURFACEDESC2 ddsd;
-      ZeroMemory(&ddsd,sizeof(ddsd));
-      ddsd.dwSize = sizeof(ddsd);
-
-      if(FAILED(srf4->Lock(0,&ddsd,DDLOCK_WAIT,0)))
-      {
-        printLog("video: can't lock surface\n");
-        return false;
-      }
-
-      surface = (LPBYTE) ddsd.lpSurface;
-      pitch = ddsd.lPitch;
-    }
-
-    // blit individual lines
-    for(int y=0;y<captureHeight;y++)
-    {
-      unsigned char *src = surface + (captureHeight-1-y) * pitch;
-      unsigned char *dst = captureData + y * captureWidth * 3;
-
-      BlitOneLine(src,dst,captureWidth);
-    }
-
-    blitSurface->Unlock(surface);
-    blitSurface->Release();
-
-    return true;
-  }
-};
-
-static DDrawBlitter Blitter;
-
-// ---- stuff common to all versions
 
 static void PatchDDrawInterface(IUnknown *dd,int version);
 static void PatchDDrawSurface(IUnknown *surf,int version);
@@ -314,208 +159,52 @@ static HRESULT DDrawSurfQueryInterface(HRESULT hr,REFIID iid,LPVOID *ppObject)
   return hr;
 }
 
-static void PrimarySurfaceCreated(IUnknown *ddraw,IUnknown *srfp,int ver)
+BYTE * pTempBuffer = NULL;
+
+void LockAndAllocate( LPDDSURFACEDESC desc )
 {
-  PrimaryDDraw = ddraw;
-  PrimarySurface = srfp;
-  PrimarySurfaceVersion = ver;
-
-  if(PrimarySurfaceVersion < 4)
+  if (!pTempBuffer)
   {
-    IDirectDrawSurface *surf = (IDirectDrawSurface *) PrimarySurface;
-
-    DDSURFACEDESC ddsd;
-    ZeroMemory(&ddsd,sizeof(ddsd));
-    ddsd.dwSize = sizeof(ddsd);
-    if(FAILED(surf->GetSurfaceDesc(&ddsd)))
-      printLog("video: can't get surface desc\n");
-    else
-    {
-      if(captureWidth != ddsd.dwWidth || captureHeight != ddsd.dwHeight)
-        setCaptureResolution(ddsd.dwWidth,ddsd.dwHeight);
-    }
+    pTempBuffer = new BYTE[ dwOriginalWidth * dwOriginalHeight * (dwOriginalBPP / 8) ];
   }
-  else
-  {
-    IDirectDrawSurface4 *srf4 = (IDirectDrawSurface4 *) PrimarySurface;
-
-    DDSURFACEDESC2 ddsd;
-    ZeroMemory(&ddsd,sizeof(ddsd));
-    ddsd.dwSize = sizeof(ddsd);
-    if(FAILED(srf4->GetSurfaceDesc(&ddsd)))
-      printLog("video: can't get surface desc\n");
-    else
-    {
-      if(captureWidth != ddsd.dwWidth || captureHeight != ddsd.dwHeight)
-        setCaptureResolution(ddsd.dwWidth,ddsd.dwHeight);
-    }
-  }
-
-  graphicsInitTiming();
+  desc->lPitch = dwOriginalWidth * (dwOriginalBPP / 8);
+  desc->dwWidth = dwOriginalWidth;
+  desc->dwHeight = dwOriginalHeight;
+  desc->lpSurface = pTempBuffer;
 }
 
-static void ImplementFlip(IUnknown *surf,int version)
+HRESULT __stdcall UnlockAndScale( IUnknown * me )
 {
-  IDirectDrawSurface *back = 0;
+  DDSURFACEDESC desc;
+  ZeroMemory(&desc, sizeof(DDSURFACEDESC));
+  desc.dwSize = sizeof (DDSURFACEDESC);
+  HRESULT hRes = Real_DDrawSurface_Lock( me, NULL, &desc, DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT, NULL );
+  if (hRes != DD_OK) return hRes;
 
-  videoNeedEncoder();
-
-  if(params.CaptureVideo)
+  BYTE * pSrc = pTempBuffer;
+  BYTE * pDst = (BYTE*)desc.lpSurface;
+  for (int y=0; y<dwOriginalHeight; y++)
   {
-    if(version < 4)
+    BYTE * pSrcLine = pSrc;
+    for (int my = 0; my < dwMultiplier; my++)
     {
-      DDSCAPS caps;
-      ZeroMemory(&caps,sizeof(caps));
-
-      caps.dwCaps = DDSCAPS_BACKBUFFER;
-      ((IDirectDrawSurface *) surf)->GetAttachedSurface(&caps,&back);
-    }
-    else
-    {
-      DDSCAPS2 caps;
-      ZeroMemory(&caps,sizeof(caps));
-
-      caps.dwCaps = DDSCAPS_BACKBUFFER;
-      ((IDirectDrawSurface4 *) surf)->GetAttachedSurface(&caps,(IDirectDrawSurface4 **) &back);
-    }
-
-    if(back)
-    {
-      VideoCaptureDataLock lock;
-
-      if(Blitter.BlitSurfaceToCapture(back,version))
-        encoder->WriteFrame(captureData);
-
-      back->Release();
-    }
-  }
-
-  nextFrame();
-}
-
-static bool GetResolutionFromSurface(IUnknown *surf,int version,int &width,int &height)
-{
-  if(version < 4)
-  {
-    DDSURFACEDESC ddsd;
-    ZeroMemory(&ddsd,sizeof(ddsd));
-
-    ddsd.dwSize = sizeof(ddsd);
-    if(SUCCEEDED(((IDirectDrawSurface *) surf)->GetSurfaceDesc(&ddsd)))
-    {
-      width = ddsd.dwWidth;
-      height = ddsd.dwHeight;
-      return true;
-    }
-    else
-      printLog("video/ddraw: couldn't get blit source surface desc\n");
-  }
-  else
-  {
-    DDSURFACEDESC2 ddsd;
-    ZeroMemory(&ddsd,sizeof(ddsd));
-    
-    ddsd.dwSize = sizeof(ddsd);
-    if(SUCCEEDED(((IDirectDrawSurface4 *) surf)->GetSurfaceDesc(&ddsd)))
-    {
-      width = ddsd.dwWidth;
-      height = ddsd.dwHeight;
-      return true;
-    }
-    else
-      printLog("video/ddraw: couldn't get blit source surface desc\n");
-  }
-
-  return false;
-}
-
-static void ImplementBltToPrimary(IUnknown *surf,int version)
-{
-  if(!surf)
-    return;
-
-  videoNeedEncoder();
-
-  if(params.CaptureVideo)
-  {
-    int width,height;
-    if(GetResolutionFromSurface(surf,version,width,height))
-      setCaptureResolution(width,height);
-
-    VideoCaptureDataLock lock;
-    if(Blitter.BlitSurfaceToCapture((IDirectDrawSurface *) surf,version))
-      encoder->WriteFrame(captureData);
-  }
-
-  nextFrame();
-}
-
-static unsigned char *primaryData=0, *primaryLockPtr=0;
-static int primaryWidth, primaryHeight, primaryPitch;
-
-static void ImplementLockPrimary(IUnknown *surf,LPDDSURFACEDESC ddsd,int version)
-{
-  if(!surf || !params.VirtualFramebuffer)
-    return;
-
-  videoNeedEncoder();
-
-  if(params.CaptureVideo)
-  {
-    int width,height;
-    if(GetResolutionFromSurface(surf,version,width,height))
-      setCaptureResolution(width,height);
-
-    if(Blitter.SetFormatFromSurface(surf) && !primaryData)
-    {
-      // save orig. lock parameters
-      primaryLockPtr = (unsigned char*) ddsd->lpSurface;
-      primaryPitch = ddsd->lPitch;
-      primaryWidth = width;
-      primaryHeight = height;
-
-      // redirect app to our own buffer
-      int bufStride = primaryWidth * Blitter.GetBytesPerPixel();
-      primaryData = new unsigned char[bufStride * primaryHeight];
-      memset(primaryData,0,bufStride * primaryHeight);
-
-      ddsd->lpSurface = primaryData;
-      ddsd->lPitch = bufStride;
-    }
-  }
-}
-
-static void ImplementUnlockPrimary()
-{
-  if(primaryData)
-  {
-    int bufStride = primaryWidth * Blitter.GetBytesPerPixel();
-
-    {
-      VideoCaptureDataLock lock;
-
-      // convert from temp buffer to capture buffer
-      for(int y=0;y<captureHeight;y++)
+      BYTE * pDstLine = pDst;
+      pSrc = pSrcLine;
+      for (int x=0; x<dwOriginalWidth; x++)
       {
-        unsigned char *src = primaryData + (captureHeight-1-y) * bufStride;
-        unsigned char *dst = captureData + y * captureWidth * 3;
-
-        Blitter.BlitOneLine(src,dst,captureWidth);
+        for (int mx = 0; mx < dwMultiplier; mx++)
+        {
+          CopyMemory( pDst, pSrc, (dwOriginalBPP / 8) );
+          pDst += (dwOriginalBPP / 8);
+        }
+        pSrc += (dwOriginalBPP / 8);
       }
-
-      encoder->WriteFrame(captureData);
+      pDst = pDstLine + desc.lPitch;
     }
-
-    // copy from temp buffer to primary surface so user sees what's going on
-    for(int y=0;y<primaryHeight;y++)
-      memcpy(primaryLockPtr + y*primaryPitch,primaryData + y*bufStride,bufStride);
-
-    // free temp buffer again
-    delete[] primaryData;
-    primaryData = 0;
+    pSrc = pSrcLine + (dwOriginalBPP / 8) * dwOriginalWidth;
   }
 
-  nextFrame();
+  return Real_DDrawSurface_Unlock( me, NULL );
 }
 
 // ---- directdraw 1
@@ -531,10 +220,22 @@ static HRESULT __stdcall Mine_DDraw_CreateSurface(IDirectDraw *dd,LPDDSURFACEDES
   if(SUCCEEDED(hr))
   {
     PatchDDrawSurface(*pSurf,1);
-    if(ddsd->ddsCaps.dwCaps & DDSCAPS_PRIMARYSURFACE)
-      PrimarySurfaceCreated(dd,*pSurf,1);
   }
 
+  return hr;
+}
+
+static HRESULT __stdcall Mine_DDraw_SetCooperativeLevel(IDirectDraw *dd,HWND hWnd, DWORD dwFlags)
+{
+  hwOriginal = hWnd;
+  return Real_DDraw_SetCooperativeLevel(dd,hWnd,dwFlags);
+}
+
+static HRESULT __stdcall Mine_DDraw_SetDisplayMode(IDirectDraw *dd,DWORD dwWidth,DWORD dwHeight,DWORD dwBPP)
+{
+  ModifyResolution(&dwWidth,&dwHeight);
+  dwOriginalBPP = dwBPP;
+  HRESULT hr = Real_DDraw_SetDisplayMode(dd,dwWidth, dwHeight, dwBPP);
   return hr;
 }
 
@@ -543,43 +244,20 @@ static HRESULT __stdcall Mine_DDrawSurface_QueryInterface(IUnknown *dd,REFIID ii
   return DDrawSurfQueryInterface(Real_DDrawSurface_QueryInterface(dd,iid,ppObj),iid,ppObj);
 }
 
-static HRESULT __stdcall Mine_DDrawSurface_Blt(IUnknown *me,LPRECT dstr,IUnknown *src,LPRECT srcr,DWORD flags,LPDDBLTFX fx)
-{
-  HRESULT hr = Real_DDrawSurface_Blt(me,dstr,src,srcr,flags,fx);
-
-  if(PrimarySurfaceVersion == 1 && me == PrimarySurface)
-    ImplementBltToPrimary(src,1);
-
-  return hr;
-}
-
 static HRESULT __stdcall Mine_DDrawSurface_Flip(IUnknown *me,IUnknown *other,DWORD flags)
 {
-  if(PrimarySurfaceVersion == 1)
-    ImplementFlip(me,1);
-
   return Real_DDrawSurface_Flip(me,other,flags);
 }
 
 static HRESULT __stdcall Mine_DDrawSurface_Lock(IUnknown *me,LPRECT rect,LPDDSURFACEDESC desc,DWORD flags,HANDLE hnd)
 {
-  HRESULT hr = Real_DDrawSurface_Lock(me,rect,desc,flags,hnd);
-  if(SUCCEEDED(hr) && rect == 0 && PrimarySurfaceVersion == 1 && me == PrimarySurface)
-    ImplementLockPrimary(me,desc,1);
-
-  return hr;
+  LockAndAllocate(desc);
+  return DD_OK;
 }
 
 static HRESULT __stdcall Mine_DDrawSurface_Unlock(IUnknown *me,void *ptr)
 {
-  if(params.VirtualFramebuffer && PrimarySurfaceVersion == 1 && me == PrimarySurface)
-    ImplementUnlockPrimary();
-
-  HRESULT hr = Real_DDrawSurface_Unlock(me,ptr);
-  if(SUCCEEDED(hr) && !params.VirtualFramebuffer && PrimarySurfaceVersion == 1 && me == PrimarySurface)
-    ImplementBltToPrimary(me,1);
-
-  return hr;
+  return UnlockAndScale(me);
 }
 
 // ---- directdraw 2
@@ -595,10 +273,22 @@ static HRESULT __stdcall Mine_DDraw2_CreateSurface(IDirectDraw2 *dd,LPDDSURFACED
   if(SUCCEEDED(hr))
   {
     PatchDDrawSurface(*pSurf,1);
-    if(ddsd->ddsCaps.dwCaps & DDSCAPS_PRIMARYSURFACE)
-      PrimarySurfaceCreated(dd,*pSurf,1);
   }
 
+  return hr;
+}
+
+static HRESULT __stdcall Mine_DDraw2_SetCooperativeLevel(IDirectDraw *dd,HWND hWnd, DWORD dwFlags)
+{
+  hwOriginal = hWnd;
+  return Real_DDraw2_SetCooperativeLevel(dd,hWnd,dwFlags);
+}
+
+static HRESULT __stdcall Mine_DDraw2_SetDisplayMode(IDirectDraw *dd,DWORD dwWidth,DWORD dwHeight,DWORD dwBPP,DWORD dwRefreshRate,DWORD dwFlags)
+{
+  ModifyResolution(&dwWidth,&dwHeight);
+  dwOriginalBPP = dwBPP;
+  HRESULT hr = Real_DDraw2_SetDisplayMode(dd,dwWidth, dwHeight, dwBPP, dwRefreshRate, dwFlags);
   return hr;
 }
 
@@ -607,43 +297,20 @@ static HRESULT __stdcall Mine_DDrawSurface2_QueryInterface(IUnknown *dd,REFIID i
   return DDrawSurfQueryInterface(Real_DDrawSurface2_QueryInterface(dd,iid,ppObj),iid,ppObj);
 }
 
-static HRESULT __stdcall Mine_DDrawSurface2_Blt(IUnknown *me,LPRECT dstr,IUnknown *src,LPRECT srcr,DWORD flags,LPDDBLTFX fx)
-{
-  HRESULT hr = Real_DDrawSurface2_Blt(me,dstr,src,srcr,flags,fx);
-
-  if(PrimarySurfaceVersion == 2 && me == PrimarySurface)
-    ImplementBltToPrimary(src,2);
-
-  return hr;
-}
-
 static HRESULT __stdcall Mine_DDrawSurface2_Flip(IUnknown *me,IUnknown *other,DWORD flags)
 {
-  if(PrimarySurfaceVersion == 2)
-    ImplementFlip(me,2);
-
-  return Real_DDrawSurface2_Flip(me,other,flags | DDFLIP_NOVSYNC);
+  return Real_DDrawSurface2_Flip(me,other,flags);
 }
 
 static HRESULT __stdcall Mine_DDrawSurface2_Lock(IUnknown *me,LPRECT rect,LPDDSURFACEDESC desc,DWORD flags,HANDLE hnd)
 {
-  HRESULT hr = Real_DDrawSurface_Lock(me,rect,desc,flags,hnd);
-  if(SUCCEEDED(hr) && rect == 0 && PrimarySurfaceVersion == 2 && me == PrimarySurface)
-    ImplementLockPrimary(me,desc,2);
-
-  return hr;
+  LockAndAllocate(desc);
+  return DD_OK;
 }
 
 static HRESULT __stdcall Mine_DDrawSurface2_Unlock(IUnknown *me,void *ptr)
 {
-  if(params.VirtualFramebuffer && PrimarySurfaceVersion == 2 && me == PrimarySurface)
-    ImplementUnlockPrimary();
-
-  HRESULT hr = Real_DDrawSurface2_Unlock(me,ptr);
-  if(SUCCEEDED(hr) && !params.VirtualFramebuffer && PrimarySurfaceVersion == 2 && me == PrimarySurface)
-    ImplementBltToPrimary(me,2);
-
-  return hr;
+  return UnlockAndScale(me);
 }
 
 // ---- directdraw 3
@@ -653,43 +320,20 @@ static HRESULT __stdcall Mine_DDrawSurface3_QueryInterface(IUnknown *dd,REFIID i
   return DDrawSurfQueryInterface(Real_DDrawSurface3_QueryInterface(dd,iid,ppObj),iid,ppObj);
 }
 
-static HRESULT __stdcall Mine_DDrawSurface3_Blt(IUnknown *me,LPRECT dstr,IUnknown *src,LPRECT srcr,DWORD flags,LPDDBLTFX fx)
-{
-  HRESULT hr = Real_DDrawSurface3_Blt(me,dstr,src,srcr,flags,fx);
-
-  if(PrimarySurfaceVersion == 3 && me == PrimarySurface)
-    ImplementBltToPrimary(src,3);
-
-  return hr;
-}
-
 static HRESULT __stdcall Mine_DDrawSurface3_Flip(IUnknown *me,IUnknown *other,DWORD flags)
 {
-  if(PrimarySurfaceVersion == 3)
-    ImplementFlip(me,3);
-
-  return Real_DDrawSurface3_Flip(me,other,flags | DDFLIP_NOVSYNC);
+  return Real_DDrawSurface3_Flip(me,other,flags);
 }
 
 static HRESULT __stdcall Mine_DDrawSurface3_Lock(IUnknown *me,LPRECT rect,LPDDSURFACEDESC desc,DWORD flags,HANDLE hnd)
 {
-  HRESULT hr = Real_DDrawSurface3_Lock(me,rect,desc,flags,hnd);
-  if(SUCCEEDED(hr) && rect == 0 && PrimarySurfaceVersion == 3 && me == PrimarySurface)
-    ImplementLockPrimary(me,desc,3);
-
-  return hr;
+  LockAndAllocate(desc);
+  return DD_OK;
 }
 
 static HRESULT __stdcall Mine_DDrawSurface3_Unlock(IUnknown *me,void *ptr)
 {
-  if(params.VirtualFramebuffer && PrimarySurfaceVersion == 3 && me == PrimarySurface)
-    ImplementUnlockPrimary();
-
-  HRESULT hr = Real_DDrawSurface3_Unlock(me,ptr);
-  if(SUCCEEDED(hr) && !params.VirtualFramebuffer && PrimarySurfaceVersion == 3 && me == PrimarySurface)
-    ImplementBltToPrimary(me,3);
-
-  return hr;
+  return UnlockAndScale(me);
 }
 
 // ---- directdraw 4
@@ -698,6 +342,18 @@ static HRESULT __stdcall Mine_DDraw4_QueryInterface(IUnknown *dd,REFIID iid,LPVO
 {
   return DDrawQueryInterface(Real_DDraw4_QueryInterface(dd,iid,ppObj),iid,ppObj);
 }
+static HRESULT __stdcall Mine_DDraw4_SetCooperativeLevel(IDirectDraw *dd,HWND hWnd, DWORD dwFlags)
+{
+  hwOriginal = hWnd;
+  return Real_DDraw4_SetCooperativeLevel(dd,hWnd,dwFlags);
+}
+static HRESULT __stdcall Mine_DDraw4_SetDisplayMode(IDirectDraw *dd,DWORD dwWidth,DWORD dwHeight,DWORD dwBPP,DWORD dwRefreshRate,DWORD dwFlags)
+{
+  ModifyResolution(&dwWidth,&dwHeight);
+  dwOriginalBPP = dwBPP;
+  HRESULT hr = Real_DDraw4_SetDisplayMode(dd,dwWidth, dwHeight, dwBPP, dwRefreshRate, dwFlags);
+  return hr;
+}
 
 static HRESULT __stdcall Mine_DDraw4_CreateSurface(IDirectDraw4 *dd,LPDDSURFACEDESC2 ddsd,LPDIRECTDRAWSURFACE4 *pSurf,IUnknown *pUnkOuter)
 {
@@ -705,8 +361,6 @@ static HRESULT __stdcall Mine_DDraw4_CreateSurface(IDirectDraw4 *dd,LPDDSURFACED
   if(SUCCEEDED(hr))
   {
     PatchDDrawSurface(*pSurf,4);
-    if(ddsd->ddsCaps.dwCaps & DDSCAPS_PRIMARYSURFACE)
-      PrimarySurfaceCreated(dd,*pSurf,4);
   }
 
   return hr;
@@ -717,44 +371,21 @@ static HRESULT __stdcall Mine_DDrawSurface4_QueryInterface(IUnknown *dd,REFIID i
   return DDrawSurfQueryInterface(Real_DDrawSurface4_QueryInterface(dd,iid,ppObj),iid,ppObj);
 }
 
-static HRESULT __stdcall Mine_DDrawSurface4_Blt(IUnknown *me,LPRECT dstr,IUnknown *src,LPRECT srcr,DWORD flags,LPDDBLTFX fx)
-{
-  HRESULT hr = Real_DDrawSurface4_Blt(me,dstr,src,srcr,flags,fx);
-
-  if(PrimarySurfaceVersion == 4 && me == PrimarySurface)
-    ImplementBltToPrimary(src,4);
-
-  return hr;
-}
-
 static HRESULT __stdcall Mine_DDrawSurface4_Flip(IUnknown *me,IUnknown *other,DWORD flags)
 {
-  if(PrimarySurfaceVersion == 4)
-    ImplementFlip(me,4);
-
-  return Real_DDrawSurface4_Flip(me,other,flags | DDFLIP_NOVSYNC);
+  return Real_DDrawSurface4_Flip(me,other,flags);
 }
 
 static HRESULT __stdcall Mine_DDrawSurface4_Lock(IUnknown *me,LPRECT rect,LPDDSURFACEDESC desc,DWORD flags,HANDLE hnd)
 {
-  HRESULT hr = Real_DDrawSurface4_Lock(me,rect,desc,flags,hnd);
-  if(SUCCEEDED(hr) && rect == 0 && PrimarySurfaceVersion == 4 && me == PrimarySurface)
-    ImplementLockPrimary(me,desc,4);
-
-  return hr;
+  LockAndAllocate(desc);
+  return DD_OK;
 }
 
 
 static HRESULT __stdcall Mine_DDrawSurface4_Unlock(IUnknown *me,void *ptr)
 {
-  if(params.VirtualFramebuffer && PrimarySurfaceVersion == 4 && me == PrimarySurface)
-    ImplementUnlockPrimary();
-
-  HRESULT hr = Real_DDrawSurface4_Unlock(me,ptr);
-  if(SUCCEEDED(hr) && !params.VirtualFramebuffer && PrimarySurfaceVersion == 4 && me == PrimarySurface)
-    ImplementBltToPrimary(me,4);
-
-  return hr;
+  return UnlockAndScale(me);
 }
 
 // ---- directdraw 7
@@ -763,6 +394,18 @@ static HRESULT __stdcall Mine_DDraw7_QueryInterface(IUnknown *dd,REFIID iid,LPVO
 {
   return DDrawQueryInterface(Real_DDraw7_QueryInterface(dd,iid,ppObj),iid,ppObj);
 }
+static HRESULT __stdcall Mine_DDraw7_SetCooperativeLevel(IDirectDraw *dd,HWND hWnd, DWORD dwFlags)
+{
+  hwOriginal = hWnd;
+  return Real_DDraw7_SetCooperativeLevel(dd,hWnd,dwFlags);
+}
+static HRESULT __stdcall Mine_DDraw7_SetDisplayMode(IDirectDraw *dd,DWORD dwWidth,DWORD dwHeight,DWORD dwBPP,DWORD dwRefreshRate,DWORD dwFlags)
+{
+  ModifyResolution(&dwWidth,&dwHeight);
+  dwOriginalBPP = dwBPP;
+  HRESULT hr = Real_DDraw7_SetDisplayMode(dd,dwWidth, dwHeight, dwBPP, dwRefreshRate, dwFlags);
+  return hr;
+}
 
 static HRESULT __stdcall Mine_DDraw7_CreateSurface(IDirectDraw7 *dd,LPDDSURFACEDESC2 ddsd,LPDIRECTDRAWSURFACE7 *pSurf,IUnknown *pUnkOuter)
 {
@@ -770,8 +413,6 @@ static HRESULT __stdcall Mine_DDraw7_CreateSurface(IDirectDraw7 *dd,LPDDSURFACED
   if(SUCCEEDED(hr))
   {
     PatchDDrawSurface(*pSurf,7);
-    if(ddsd->ddsCaps.dwCaps & DDSCAPS_PRIMARYSURFACE)
-      PrimarySurfaceCreated(dd,*pSurf,7);
   }
 
   return hr;
@@ -782,52 +423,33 @@ static HRESULT __stdcall Mine_DDrawSurface7_QueryInterface(IUnknown *dd,REFIID i
   return DDrawSurfQueryInterface(Real_DDrawSurface7_QueryInterface(dd,iid,ppObj),iid,ppObj);
 }
 
-static HRESULT __stdcall Mine_DDrawSurface7_Blt(IUnknown *me,LPRECT dstr,IUnknown *src,LPRECT srcr,DWORD flags,LPDDBLTFX fx)
-{
-  HRESULT hr = Real_DDrawSurface7_Blt(me,dstr,src,srcr,flags,fx);
-
-  if(PrimarySurfaceVersion == 7 && me == PrimarySurface)
-    ImplementBltToPrimary(src,7);
-
-  return hr;
-}
-
 static HRESULT __stdcall Mine_DDrawSurface7_Flip(IUnknown *me,IUnknown *other,DWORD flags)
 {
-  if(PrimarySurfaceVersion == 7)
-    ImplementFlip(me,7);
-
-  return Real_DDrawSurface7_Flip(me,other,flags | DDFLIP_NOVSYNC);
+  return Real_DDrawSurface7_Flip(me,other,flags);
 }
 
 static HRESULT __stdcall Mine_DDrawSurface7_Lock(IUnknown *me,LPRECT rect,LPDDSURFACEDESC desc,DWORD flags,HANDLE hnd)
 {
-  HRESULT hr = Real_DDrawSurface_Lock(me,rect,desc,flags,hnd);
-  if(SUCCEEDED(hr) && rect == 0 && PrimarySurfaceVersion == 7 && me == PrimarySurface)
-    ImplementLockPrimary(me,desc,7);
-
-  return hr;
+  LockAndAllocate(desc);
+  return DD_OK;
 }
 
 static HRESULT __stdcall Mine_DDrawSurface7_Unlock(IUnknown *me,void *ptr)
 {
-  if(params.VirtualFramebuffer && PrimarySurfaceVersion == 7 && me == PrimarySurface)
-    ImplementUnlockPrimary();
-
-  HRESULT hr = Real_DDrawSurface7_Unlock(me,ptr);
-  if(SUCCEEDED(hr) && !params.VirtualFramebuffer && PrimarySurfaceVersion == 7 && me == PrimarySurface)
-    ImplementBltToPrimary(me,7);
-
-  return hr;
+  return UnlockAndScale(me);
 }
 
 // ---- again, common stuff
 
 static void PatchDDrawInterface(IUnknown *dd,int version)
 {
+  printLog("DirectDraw version: %d\n",version);
+
 #define DDRAW_HOOKS(ver) \
-  HookCOMOnce(&Real_DDraw ## ver ## QueryInterface, dd, 0, Mine_DDraw ## ver ## QueryInterface); \
-  HookCOMOnce(&Real_DDraw ## ver ## CreateSurface,  dd, 6, (PDDraw_CreateSurface) Mine_DDraw ## ver ## CreateSurface)
+  HookCOMOnce(&Real_DDraw ## ver ## QueryInterface,       dd, 0,  Mine_DDraw ## ver ## QueryInterface); \
+  HookCOMOnce(&Real_DDraw ## ver ## CreateSurface,        dd, 6,  (PDDraw_CreateSurface)  Mine_DDraw ## ver ## CreateSurface); \
+  HookCOMOnce(&Real_DDraw ## ver ## SetCooperativeLevel,  dd, 20, (PDDraw_SetCooperativeLevel)  Mine_DDraw ## ver ## SetCooperativeLevel); \
+  HookCOMOnce(&Real_DDraw ## ver ## SetDisplayMode,       dd, 21, (PDDraw ## ver ## SetDisplayMode) Mine_DDraw ## ver ## SetDisplayMode)
 
   switch(version)
   {
@@ -842,9 +464,10 @@ static void PatchDDrawInterface(IUnknown *dd,int version)
 
 static void PatchDDrawSurface(IUnknown *dd,int version)
 {
+  printLog("DirectDraw surface version: %d\n",version);
+
 #define DDRAW_SURFACE_HOOKS(ver) \
   HookCOMOnce(&Real_DDrawSurface ## ver ## QueryInterface,  dd,  0, Mine_DDrawSurface ## ver ## QueryInterface); \
-  HookCOMOnce(&Real_DDrawSurface ## ver ## Blt,             dd,  5, Mine_DDrawSurface ## ver ## Blt); \
   HookCOMOnce(&Real_DDrawSurface ## ver ## Flip,            dd, 11, Mine_DDrawSurface ## ver ## Flip); \
   HookCOMOnce(&Real_DDrawSurface ## ver ## Lock,            dd, 25, Mine_DDrawSurface ## ver ## Lock); \
   HookCOMOnce(&Real_DDrawSurface ## ver ## Unlock,          dd, 32, Mine_DDrawSurface ## ver ## Unlock)

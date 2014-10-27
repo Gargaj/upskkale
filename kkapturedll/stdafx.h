@@ -37,6 +37,4 @@
 #include <intrin.h>
 
 #include "main.h"
-#include "sound.h"
-#include "timing.h"
 #include "util.h"

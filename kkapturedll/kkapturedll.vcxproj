@@ -106,30 +106,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="audio_resample.cpp" />
-    <ClCompile Include="avi_videoencoder_dshow.cpp" />
-    <ClCompile Include="avi_videoencoder_vfw.cpp" />
-    <ClCompile Include="bmp_videoencoder.cpp" />
     <ClCompile Include="intercept.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="mt_proxy_videoencoder.cpp" />
-    <ClCompile Include="sound.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="timing.cpp" />
     <ClCompile Include="util.cpp" />
     <ClCompile Include="video.cpp" />
-    <ClCompile Include="video_direct3d10.cpp" />
-    <ClCompile Include="video_direct3d8.cpp" />
-    <ClCompile Include="video_direct3d9.cpp" />
     <ClCompile Include="video_directdraw.cpp">
       <AssemblerOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">AssemblyAndSourceCode</AssemblerOutput>
     </ClCompile>
-    <ClCompile Include="video_gdi.cpp" />
-    <ClCompile Include="video_opengl.cpp" />
-    <ClCompile Include="videoencoder.cpp" />
     <ClCompile Include="mhook-lib\mhook.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
       </PrecompiledHeader>
@@ -162,20 +149,11 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="audio_resample.h" />
-    <ClInclude Include="avi_videoencoder_dshow.h" />
-    <ClInclude Include="avi_videoencoder_vfw.h" />
-    <ClInclude Include="bmp_videoencoder.h" />
     <ClInclude Include="intercept.h" />
     <ClInclude Include="main.h" />
-    <ClInclude Include="mt_proxy_videoencoder.h" />
-    <ClInclude Include="sound.h" />
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="timing.h" />
     <ClInclude Include="util.h" />
     <ClInclude Include="video.h" />
-    <ClInclude Include="videocapturetimer.h" />
-    <ClInclude Include="videoencoder.h" />
     <ClInclude Include="mhook-lib\mhook.h" />
     <ClInclude Include="disasm-lib\cpu.h" />
     <ClInclude Include="disasm-lib\disasm.h" />

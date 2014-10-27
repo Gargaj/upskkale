@@ -17,34 +17,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="audio_resample.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="avi_videoencoder_dshow.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="avi_videoencoder_vfw.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="bmp_videoencoder.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="intercept.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="mt_proxy_videoencoder.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="sound.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="stdafx.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="timing.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="util.cpp">
@@ -53,25 +32,7 @@
     <ClCompile Include="video.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="video_direct3d10.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="video_direct3d8.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="video_direct3d9.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="video_directdraw.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="video_gdi.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="video_opengl.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="videoencoder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="mhook-lib\mhook.cpp">
@@ -91,46 +52,19 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="audio_resample.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="avi_videoencoder_dshow.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="avi_videoencoder_vfw.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="bmp_videoencoder.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="intercept.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="main.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="mt_proxy_videoencoder.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="sound.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="stdafx.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="timing.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="util.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="video.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="videocapturetimer.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="videoencoder.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="mhook-lib\mhook.h">
