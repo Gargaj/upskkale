@@ -92,7 +92,9 @@ static int PrimarySurfaceVersion = 0;
 
 static ULONG DDrawRefCount = 0;
 
-DWORD dwMultiplier = 4;
+// TODO: Scale up to a non-multiple resolution (desktop?), then use integer scaling and center image
+
+DWORD dwMultiplier = 4; // currently hardwired
 DWORD dwOriginalWidth = 0;
 DWORD dwOriginalHeight = 0;
 HWND hwOriginal = NULL;
@@ -173,12 +175,12 @@ void LockAndAllocate( LPDDSURFACEDESC desc )
   desc->lpSurface = pTempBuffer;
 }
 
-HRESULT __stdcall UnlockAndScale( IUnknown * me )
+HRESULT __stdcall UnlockAndScale( IUnknown * me, PDDrawSurface_Lock lock, PDDrawSurface_Unlock unlock )
 {
   DDSURFACEDESC desc;
   ZeroMemory(&desc, sizeof(DDSURFACEDESC));
   desc.dwSize = sizeof (DDSURFACEDESC);
-  HRESULT hRes = Real_DDrawSurface_Lock( me, NULL, &desc, DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT, NULL );
+  HRESULT hRes = lock( me, NULL, &desc, DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT, NULL );
   if (hRes != DD_OK) return hRes;
 
   BYTE * pSrc = pTempBuffer;
@@ -204,7 +206,7 @@ HRESULT __stdcall UnlockAndScale( IUnknown * me )
     pSrc = pSrcLine + (dwOriginalBPP / 8) * dwOriginalWidth;
   }
 
-  return Real_DDrawSurface_Unlock( me, NULL );
+  return unlock( me, NULL );
 }
 
 // ---- directdraw 1
@@ -257,7 +259,7 @@ static HRESULT __stdcall Mine_DDrawSurface_Lock(IUnknown *me,LPRECT rect,LPDDSUR
 
 static HRESULT __stdcall Mine_DDrawSurface_Unlock(IUnknown *me,void *ptr)
 {
-  return UnlockAndScale(me);
+  return UnlockAndScale(me, Real_DDrawSurface_Lock, Real_DDrawSurface_Unlock);
 }
 
 // ---- directdraw 2
@@ -310,7 +312,7 @@ static HRESULT __stdcall Mine_DDrawSurface2_Lock(IUnknown *me,LPRECT rect,LPDDSU
 
 static HRESULT __stdcall Mine_DDrawSurface2_Unlock(IUnknown *me,void *ptr)
 {
-  return UnlockAndScale(me);
+  return UnlockAndScale(me, Real_DDrawSurface2_Lock, Real_DDrawSurface2_Unlock);
 }
 
 // ---- directdraw 3
@@ -333,7 +335,7 @@ static HRESULT __stdcall Mine_DDrawSurface3_Lock(IUnknown *me,LPRECT rect,LPDDSU
 
 static HRESULT __stdcall Mine_DDrawSurface3_Unlock(IUnknown *me,void *ptr)
 {
-  return UnlockAndScale(me);
+  return UnlockAndScale(me, Real_DDrawSurface3_Lock, Real_DDrawSurface3_Unlock);
 }
 
 // ---- directdraw 4
@@ -385,7 +387,7 @@ static HRESULT __stdcall Mine_DDrawSurface4_Lock(IUnknown *me,LPRECT rect,LPDDSU
 
 static HRESULT __stdcall Mine_DDrawSurface4_Unlock(IUnknown *me,void *ptr)
 {
-  return UnlockAndScale(me);
+  return UnlockAndScale(me, Real_DDrawSurface4_Lock, Real_DDrawSurface4_Unlock);
 }
 
 // ---- directdraw 7
@@ -436,7 +438,7 @@ static HRESULT __stdcall Mine_DDrawSurface7_Lock(IUnknown *me,LPRECT rect,LPDDSU
 
 static HRESULT __stdcall Mine_DDrawSurface7_Unlock(IUnknown *me,void *ptr)
 {
-  return UnlockAndScale(me);
+  return UnlockAndScale(me, Real_DDrawSurface7_Lock, Real_DDrawSurface7_Unlock);
 }
 
 // ---- again, common stuff
