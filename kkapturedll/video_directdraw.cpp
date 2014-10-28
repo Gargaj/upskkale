@@ -109,9 +109,7 @@ void ModifyResolution( DWORD* dwWidth, DWORD* dwHeight )
   printLog("current resolution: %d * %d\n",*dwWidth,*dwHeight);
   if (*dwWidth < 640 || *dwHeight < 480)
   {
-//     *dwWidth *= dwMultiplier;
-//     *dwHeight *= dwMultiplier;
-    *dwWidth  = GetSystemMetrics( SM_CXSCREEN );
+    *dwWidth  = GetSystemMetrics( SM_CXSCREEN ); // TODO: parameter from setup box?
     *dwHeight = GetSystemMetrics( SM_CYSCREEN );
     DWORD nZoomedX = 0;
     DWORD nZoomedY = 0;
