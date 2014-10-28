@@ -23,72 +23,12 @@
 #ifndef __VIDEO_H__
 #define __VIDEO_H__
 
-class VideoEncoder;
-
-class VideoCaptureDataLock
-{
-public:
-  VideoCaptureDataLock();
-  ~VideoCaptureDataLock();
-};
-
-// encoder
-VideoEncoder *createVideoEncoder(const char *filename);
-void videoStartNextPart(bool autoSize=true);
-
-void videoNeedEncoder();
-
 // setup
 void initVideo();
 void doneVideo();
 
 // init functions
-void initVideo_OpenGL();
-void initVideo_Direct3D8();
-void initVideo_Direct3D9();
-void initVideo_Direct3D10();
 void initVideo_DirectDraw();
-void initVideo_GDI();
-
-// helpers
-void setCaptureResolution(int width,int height);
-void nextFrame();
-void skipFrame();
-
-// capture helpers
-void blitAndFlipBGRAToCaptureData(unsigned char *source,unsigned pitch);
-void blitAndFlipRGBAToCaptureData(unsigned char *source,unsigned pitch);
-
-extern int captureWidth, captureHeight;
-extern unsigned char *captureData;
-
-// generic blitter class. always outputs 24bit pixels, BGR byte order.
-class GenericBlitter
-{
-  unsigned char RTab[256],GTab[256],BTab[256];
-  int RShift,GShift,BShift;
-  int RMask,GMask,BMask;
-  int BytesPerPixel;
-  bool Paletted;
-
-  // the inner loops for different bytes per source pixel
-  void Blit1ByteSrc(unsigned char *src,unsigned char *dst,int count);
-  void Blit2ByteSrc(unsigned char *src,unsigned char *dst,int count);
-  void Blit3ByteSrc(unsigned char *src,unsigned char *dst,int count);
-  void Blit4ByteSrc(unsigned char *src,unsigned char *dst,int count);
-
-public:
-  GenericBlitter();
-
-  void SetInvalidFormat();
-  void SetRGBFormat(int bits,unsigned redMask,unsigned greenMask,unsigned blueMask);
-  void SetPalettedFormat(int bits);
-  void SetPalette(const struct tagPALETTEENTRY *palette,int nEntries);
-
-  bool IsPaletted() const;
-  int  GetBytesPerPixel() const;
-
-  void BlitOneLine(unsigned char *src,unsigned char *dst,int nPixels);
-};
+void deinitVideo_DirectDraw();
 
 #endif

@@ -34,4 +34,5 @@ void initVideo()
 void doneVideo()
 {
   DeleteCriticalSection(&captureDataLock);
+  deinitVideo_DirectDraw();
 }

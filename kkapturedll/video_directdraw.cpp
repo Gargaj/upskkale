@@ -97,6 +97,8 @@ static ULONG DDrawRefCount = 0;
 DWORD dwMultiplier = 4; // currently hardwired
 DWORD dwOriginalWidth = 0;
 DWORD dwOriginalHeight = 0;
+DWORD dwOffsetX = 0;
+DWORD dwOffsetY = 0;
 HWND hwOriginal = NULL;
 DWORD dwOriginalBPP = 0;
 void ModifyResolution( DWORD* dwWidth, DWORD* dwHeight )
@@ -107,8 +109,21 @@ void ModifyResolution( DWORD* dwWidth, DWORD* dwHeight )
   printLog("current resolution: %d * %d\n",*dwWidth,*dwHeight);
   if (*dwWidth < 640 || *dwHeight < 480)
   {
-    *dwWidth *= dwMultiplier;
-    *dwHeight *= dwMultiplier;
+//     *dwWidth *= dwMultiplier;
+//     *dwHeight *= dwMultiplier;
+    *dwWidth  = GetSystemMetrics( SM_CXSCREEN );
+    *dwHeight = GetSystemMetrics( SM_CYSCREEN );
+    DWORD nZoomedX = 0;
+    DWORD nZoomedY = 0;
+    for (int i = 1; dwOriginalWidth * i <= *dwWidth && dwOriginalHeight * i <= *dwHeight; i++)
+    {
+      dwMultiplier = i;
+      nZoomedX = dwOriginalWidth  * i;
+      nZoomedY = dwOriginalHeight * i;
+    }
+
+    dwOffsetX = (*dwWidth  - nZoomedX) / 2;
+    dwOffsetY = (*dwHeight - nZoomedY) / 2;
 
     SetWindowPos(hwOriginal, 0, 0, 0, *dwWidth, *dwHeight, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE );
     SetWindowLong(hwOriginal, GWL_STYLE, WS_POPUP | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_VISIBLE );
@@ -183,8 +198,11 @@ HRESULT __stdcall UnlockAndScale( IUnknown * me, PDDrawSurface_Lock lock, PDDraw
   HRESULT hRes = lock( me, NULL, &desc, DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT, NULL );
   if (hRes != DD_OK) return hRes;
 
+  ZeroMemory( desc.lpSurface, desc.lPitch * desc.dwHeight );
+
+  BYTE pixelSize = (dwOriginalBPP / 8);
   BYTE * pSrc = pTempBuffer;
-  BYTE * pDst = (BYTE*)desc.lpSurface;
+  BYTE * pDst = (BYTE*)desc.lpSurface + dwOffsetY * desc.lPitch + dwOffsetX * pixelSize;
   for (int y=0; y<dwOriginalHeight; y++)
   {
     BYTE * pSrcLine = pSrc;
@@ -196,14 +214,14 @@ HRESULT __stdcall UnlockAndScale( IUnknown * me, PDDrawSurface_Lock lock, PDDraw
       {
         for (int mx = 0; mx < dwMultiplier; mx++)
         {
-          CopyMemory( pDst, pSrc, (dwOriginalBPP / 8) );
-          pDst += (dwOriginalBPP / 8);
+          CopyMemory( pDst, pSrc, pixelSize );
+          pDst += pixelSize;
         }
-        pSrc += (dwOriginalBPP / 8);
+        pSrc += pixelSize;
       }
       pDst = pDstLine + desc.lPitch;
     }
-    pSrc = pSrcLine + (dwOriginalBPP / 8) * dwOriginalWidth;
+    pSrc = pSrcLine + pixelSize * dwOriginalWidth;
   }
 
   return unlock( me, NULL );
@@ -523,4 +541,13 @@ void initVideo_DirectDraw()
   Real_DirectDrawCreateEx = (PDirectDrawCreateEx)GetProcAddress(ddraw, "DirectDrawCreateEx");
   if (Real_DirectDrawCreateEx)
     HookFunction(&Real_DirectDrawCreateEx,Mine_DirectDrawCreateEx);
+}
+
+void deinitVideo_DirectDraw()
+{
+  if (pTempBuffer) 
+  {
+    delete[] pTempBuffer;
+    pTempBuffer = NULL;
+  }
 }
