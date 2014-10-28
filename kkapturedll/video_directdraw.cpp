@@ -97,10 +97,23 @@ static ULONG DDrawRefCount = 0;
 DWORD dwMultiplier = 4; // currently hardwired
 DWORD dwOriginalWidth = 0;
 DWORD dwOriginalHeight = 0;
+DWORD dwNewWidth = 0;
+DWORD dwNewHeight = 0;
 DWORD dwOffsetX = 0;
 DWORD dwOffsetY = 0;
 HWND hwOriginal = NULL;
 DWORD dwOriginalBPP = 0;
+
+void ResizeMainWindow()
+{
+  if (!hwOriginal || !dwNewWidth || !dwNewHeight) return;
+  SetWindowLong(hwOriginal, GWL_STYLE, WS_POPUP | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_VISIBLE );
+  SetWindowPos(hwOriginal, 0, 0, 0, dwNewWidth, dwNewHeight, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE );
+  ShowWindow(hwOriginal, SW_SHOW);
+  SetForegroundWindow(hwOriginal);
+  SetFocus(hwOriginal);
+}
+
 void ModifyResolution( DWORD* dwWidth, DWORD* dwHeight )
 {
   dwOriginalWidth = *dwWidth;
@@ -109,8 +122,8 @@ void ModifyResolution( DWORD* dwWidth, DWORD* dwHeight )
   printLog("current resolution: %d * %d\n",*dwWidth,*dwHeight);
   if (*dwWidth < 640 || *dwHeight < 480)
   {
-    *dwWidth  = GetSystemMetrics( SM_CXSCREEN ); // TODO: parameter from setup box?
-    *dwHeight = GetSystemMetrics( SM_CYSCREEN );
+    *dwWidth  = dwNewWidth  = GetSystemMetrics( SM_CXSCREEN ); // TODO: parameter from setup box?
+    *dwHeight = dwNewHeight = GetSystemMetrics( SM_CYSCREEN );
     DWORD nZoomedX = 0;
     DWORD nZoomedY = 0;
     for (int i = 1; dwOriginalWidth * i <= *dwWidth && dwOriginalHeight * i <= *dwHeight; i++)
@@ -123,11 +136,7 @@ void ModifyResolution( DWORD* dwWidth, DWORD* dwHeight )
     dwOffsetX = (*dwWidth  - nZoomedX) / 2;
     dwOffsetY = (*dwHeight - nZoomedY) / 2;
 
-    SetWindowPos(hwOriginal, 0, 0, 0, *dwWidth, *dwHeight, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE );
-    SetWindowLong(hwOriginal, GWL_STYLE, WS_POPUP | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_VISIBLE );
-    ShowWindow(hwOriginal, SW_SHOW);
-    SetForegroundWindow(hwOriginal);
-    SetFocus(hwOriginal);
+    ResizeMainWindow();
 
     printLog("scaled resolution: %d * %d\n",*dwWidth,*dwHeight);
   }
@@ -246,6 +255,7 @@ static HRESULT __stdcall Mine_DDraw_CreateSurface(IDirectDraw *dd,LPDDSURFACEDES
 static HRESULT __stdcall Mine_DDraw_SetCooperativeLevel(IDirectDraw *dd,HWND hWnd, DWORD dwFlags)
 {
   hwOriginal = hWnd;
+  ResizeMainWindow();
   return Real_DDraw_SetCooperativeLevel(dd,hWnd,dwFlags);
 }
 
@@ -299,6 +309,7 @@ static HRESULT __stdcall Mine_DDraw2_CreateSurface(IDirectDraw2 *dd,LPDDSURFACED
 static HRESULT __stdcall Mine_DDraw2_SetCooperativeLevel(IDirectDraw *dd,HWND hWnd, DWORD dwFlags)
 {
   hwOriginal = hWnd;
+  ResizeMainWindow();
   return Real_DDraw2_SetCooperativeLevel(dd,hWnd,dwFlags);
 }
 
@@ -363,6 +374,7 @@ static HRESULT __stdcall Mine_DDraw4_QueryInterface(IUnknown *dd,REFIID iid,LPVO
 static HRESULT __stdcall Mine_DDraw4_SetCooperativeLevel(IDirectDraw *dd,HWND hWnd, DWORD dwFlags)
 {
   hwOriginal = hWnd;
+  ResizeMainWindow();
   return Real_DDraw4_SetCooperativeLevel(dd,hWnd,dwFlags);
 }
 static HRESULT __stdcall Mine_DDraw4_SetDisplayMode(IDirectDraw *dd,DWORD dwWidth,DWORD dwHeight,DWORD dwBPP,DWORD dwRefreshRate,DWORD dwFlags)
@@ -415,6 +427,7 @@ static HRESULT __stdcall Mine_DDraw7_QueryInterface(IUnknown *dd,REFIID iid,LPVO
 static HRESULT __stdcall Mine_DDraw7_SetCooperativeLevel(IDirectDraw *dd,HWND hWnd, DWORD dwFlags)
 {
   hwOriginal = hWnd;
+  ResizeMainWindow();
   return Real_DDraw7_SetCooperativeLevel(dd,hWnd,dwFlags);
 }
 static HRESULT __stdcall Mine_DDraw7_SetDisplayMode(IDirectDraw *dd,DWORD dwWidth,DWORD dwHeight,DWORD dwBPP,DWORD dwRefreshRate,DWORD dwFlags)
