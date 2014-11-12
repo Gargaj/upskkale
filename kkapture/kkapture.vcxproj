@@ -13,6 +13,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{DBA35513-DE77-4FE9-8B71-C483946E76FF}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
+    <ProjectName>upskkale</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
