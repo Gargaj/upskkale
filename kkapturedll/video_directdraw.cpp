@@ -34,11 +34,22 @@ typedef HRESULT (__stdcall *PDirectDrawCreateEx)(GUID *lpGUID,LPVOID *lplpDD,REF
 typedef HRESULT (__stdcall *PQueryInterface)(IUnknown *dd,REFIID iid,LPVOID *ppObj);
 typedef HRESULT (__stdcall *PDDraw_CreateSurface)(IUnknown *dd,LPDDSURFACEDESC ddsd,LPDIRECTDRAWSURFACE *surf,IUnknown *pUnkOuter);
 typedef HRESULT (__stdcall *PDDraw_SetCooperativeLevel)(IUnknown *dd,HWND, DWORD);
+typedef HRESULT (__stdcall *PDDraw_EnumDisplayModes)(IUnknown *dd,DWORD, LPDDSURFACEDESC, LPVOID, LPDDENUMMODESCALLBACK);
+typedef HRESULT (__stdcall *PDDraw2_EnumDisplayModes)(IUnknown *dd,DWORD, LPDDSURFACEDESC, LPVOID, LPDDENUMMODESCALLBACK);
+typedef HRESULT (__stdcall *PDDraw4_EnumDisplayModes)(IUnknown *dd,DWORD, LPDDSURFACEDESC2, LPVOID, LPDDENUMMODESCALLBACK2);
+typedef HRESULT (__stdcall *PDDraw4_EnumDisplayModes)(IUnknown *dd,DWORD, LPDDSURFACEDESC2, LPVOID, LPDDENUMMODESCALLBACK2);
+typedef HRESULT (__stdcall *PDDraw7_EnumDisplayModes)(IUnknown *dd,DWORD, LPDDSURFACEDESC2, LPVOID, LPDDENUMMODESCALLBACK2);
 typedef HRESULT (__stdcall *PDDraw_SetDisplayMode)(IUnknown *dd, DWORD, DWORD,DWORD);
 typedef HRESULT (__stdcall *PDDraw2_SetDisplayMode)(IUnknown *dd, DWORD, DWORD,DWORD, DWORD, DWORD);
 typedef HRESULT (__stdcall *PDDraw4_SetDisplayMode)(IUnknown *dd, DWORD, DWORD,DWORD, DWORD, DWORD);
 typedef HRESULT (__stdcall *PDDraw7_SetDisplayMode)(IUnknown *dd, DWORD, DWORD,DWORD, DWORD, DWORD);
+
 typedef HRESULT (__stdcall *PDDrawSurface_Flip)(IUnknown *dds,IUnknown *surf,DWORD flags);
+typedef HRESULT (__stdcall *PDDrawSurface_GetSurfaceDesc)(IUnknown *dds,LPDDSURFACEDESC desc);
+typedef HRESULT (__stdcall *PDDrawSurface2_GetSurfaceDesc)(IUnknown *dds,LPDDSURFACEDESC desc);
+typedef HRESULT (__stdcall *PDDrawSurface3_GetSurfaceDesc)(IUnknown *dds,LPDDSURFACEDESC desc);
+typedef HRESULT (__stdcall *PDDrawSurface4_GetSurfaceDesc)(IUnknown *dds,LPDDSURFACEDESC2 desc);
+typedef HRESULT (__stdcall *PDDrawSurface7_GetSurfaceDesc)(IUnknown *dds,LPDDSURFACEDESC2 desc);
 typedef HRESULT (__stdcall *PDDrawSurface_Lock)(IUnknown *dds,LPRECT rect,LPDDSURFACEDESC desc,DWORD flags,HANDLE hnd);
 typedef HRESULT (__stdcall *PDDrawSurface_Unlock)(IUnknown *dds,void *ptr);
 
@@ -48,41 +59,50 @@ static PDirectDrawCreateEx Real_DirectDrawCreateEx = 0;
 static PQueryInterface Real_DDraw_QueryInterface = 0;
 static PDDraw_CreateSurface Real_DDraw_CreateSurface = 0;
 static PDDraw_SetCooperativeLevel Real_DDraw_SetCooperativeLevel = 0;
+static PDDraw_EnumDisplayModes Real_DDraw_EnumDisplayModes = 0;
 static PDDraw_SetDisplayMode Real_DDraw_SetDisplayMode = 0;
 static PQueryInterface Real_DDrawSurface_QueryInterface = 0;
 static PDDrawSurface_Flip Real_DDrawSurface_Flip = 0;
+static PDDrawSurface_GetSurfaceDesc Real_DDrawSurface_GetSurfaceDesc = 0;
 static PDDrawSurface_Lock Real_DDrawSurface_Lock = 0;
 static PDDrawSurface_Unlock Real_DDrawSurface_Unlock = 0;
 
 static PQueryInterface Real_DDraw2_QueryInterface = 0;
 static PDDraw_CreateSurface Real_DDraw2_CreateSurface = 0;
 static PDDraw_SetCooperativeLevel Real_DDraw2_SetCooperativeLevel = 0;
+static PDDraw2_EnumDisplayModes Real_DDraw2_EnumDisplayModes = 0;
 static PDDraw2_SetDisplayMode Real_DDraw2_SetDisplayMode = 0;
 static PQueryInterface Real_DDrawSurface2_QueryInterface = 0;
 static PDDrawSurface_Flip Real_DDrawSurface2_Flip = 0;
+static PDDrawSurface2_GetSurfaceDesc Real_DDrawSurface2_GetSurfaceDesc = 0;
 static PDDrawSurface_Lock Real_DDrawSurface2_Lock = 0;
 static PDDrawSurface_Unlock Real_DDrawSurface2_Unlock = 0;
 
 static PQueryInterface Real_DDrawSurface3_QueryInterface = 0;
 static PDDrawSurface_Flip Real_DDrawSurface3_Flip = 0;
+static PDDrawSurface3_GetSurfaceDesc Real_DDrawSurface3_GetSurfaceDesc = 0;
 static PDDrawSurface_Lock Real_DDrawSurface3_Lock = 0;
 static PDDrawSurface_Unlock Real_DDrawSurface3_Unlock = 0;
 
 static PQueryInterface Real_DDraw4_QueryInterface = 0;
 static PDDraw_CreateSurface Real_DDraw4_CreateSurface = 0;
 static PDDraw_SetCooperativeLevel Real_DDraw4_SetCooperativeLevel = 0;
+static PDDraw4_EnumDisplayModes Real_DDraw4_EnumDisplayModes = 0;
 static PDDraw4_SetDisplayMode Real_DDraw4_SetDisplayMode = 0;
 static PQueryInterface Real_DDrawSurface4_QueryInterface = 0;
 static PDDrawSurface_Flip Real_DDrawSurface4_Flip = 0;
+static PDDrawSurface4_GetSurfaceDesc Real_DDrawSurface4_GetSurfaceDesc = 0;
 static PDDrawSurface_Lock Real_DDrawSurface4_Lock = 0;
 static PDDrawSurface_Unlock Real_DDrawSurface4_Unlock = 0;
 
 static PQueryInterface Real_DDraw7_QueryInterface = 0;
 static PDDraw_CreateSurface Real_DDraw7_CreateSurface = 0;
 static PDDraw_SetCooperativeLevel Real_DDraw7_SetCooperativeLevel = 0;
+static PDDraw7_EnumDisplayModes Real_DDraw7_EnumDisplayModes = 0;
 static PDDraw7_SetDisplayMode Real_DDraw7_SetDisplayMode = 0;
 static PQueryInterface Real_DDrawSurface7_QueryInterface = 0;
 static PDDrawSurface_Flip Real_DDrawSurface7_Flip = 0;
+static PDDrawSurface7_GetSurfaceDesc Real_DDrawSurface7_GetSurfaceDesc = 0;
 static PDDrawSurface_Lock Real_DDrawSurface7_Lock = 0;
 static PDDrawSurface_Unlock Real_DDrawSurface7_Unlock = 0;
 
@@ -189,7 +209,9 @@ void LockAndAllocate( LPDDSURFACEDESC desc )
 {
   if (!pTempBuffer)
   {
-    pTempBuffer = new BYTE[ dwOriginalWidth * dwOriginalHeight * (dwOriginalBPP / 8) ];
+    DWORD dwBufferSize = dwOriginalWidth * dwOriginalHeight * (dwOriginalBPP / 8); // width * height * pixel size in bytes
+    dwBufferSize *= 4; // fix to work around bug in Scream by Altair ;D
+    pTempBuffer = new BYTE[ dwBufferSize ];
   }
   desc->lPitch = dwOriginalWidth * (dwOriginalBPP / 8);
   desc->dwWidth = dwOriginalWidth;
@@ -207,19 +229,19 @@ HRESULT __stdcall UnlockAndScale( IUnknown * me, PDDrawSurface_Lock lock, PDDraw
 
   ZeroMemory( desc.lpSurface, desc.lPitch * desc.dwHeight );
 
-  BYTE pixelSize = (dwOriginalBPP / 8);
+  BYTE pixelSize = (BYTE)(dwOriginalBPP / 8);
   BYTE * pSrc = pTempBuffer;
   BYTE * pDst = (BYTE*)desc.lpSurface + dwOffsetY * desc.lPitch + dwOffsetX * pixelSize;
-  for (int y=0; y<dwOriginalHeight; y++)
+  for (DWORD y=0; y<dwOriginalHeight; y++)
   {
     BYTE * pSrcLine = pSrc;
-    for (int my = 0; my < dwMultiplier; my++)
+    for (DWORD my = 0; my < dwMultiplier; my++)
     {
       BYTE * pDstLine = pDst;
       pSrc = pSrcLine;
-      for (int x=0; x<dwOriginalWidth; x++)
+      for (DWORD x=0; x<dwOriginalWidth; x++)
       {
-        for (int mx = 0; mx < dwMultiplier; mx++)
+        for (DWORD mx = 0; mx < dwMultiplier; mx++)
         {
           CopyMemory( pDst, pSrc, pixelSize );
           pDst += pixelSize;
@@ -243,6 +265,11 @@ static HRESULT __stdcall Mine_DDraw_QueryInterface(IUnknown *dd,REFIID iid,LPVOI
 
 static HRESULT __stdcall Mine_DDraw_CreateSurface(IDirectDraw *dd,LPDDSURFACEDESC ddsd,LPDIRECTDRAWSURFACE *pSurf,IUnknown *pUnkOuter)
 {
+  if ((ddsd->dwFlags & DDSD_WIDTH) && ddsd->dwWidth == dwOriginalWidth)
+    ddsd->dwWidth = dwNewWidth;
+  if ((ddsd->dwFlags & DDSD_HEIGHT) && ddsd->dwHeight == dwOriginalHeight)
+    ddsd->dwHeight = dwNewHeight;
+
   HRESULT hr = Real_DDraw_CreateSurface(dd,ddsd,pSurf,pUnkOuter);
   if(SUCCEEDED(hr))
   {
@@ -257,6 +284,32 @@ static HRESULT __stdcall Mine_DDraw_SetCooperativeLevel(IDirectDraw *dd,HWND hWn
   hwOriginal = hWnd;
   ResizeMainWindow();
   return Real_DDraw_SetCooperativeLevel(dd,hWnd,dwFlags);
+}
+
+static HRESULT __stdcall Mine_DDraw_EnumDisplayModes(IDirectDraw *dd,DWORD dwFlags, LPDDSURFACEDESC lpDDSurfaceDesc, LPVOID lpContext, LPDDENUMMODESCALLBACK lpEnumModesCallback)
+{
+  HRESULT h = Real_DDraw_EnumDisplayModes(dd,dwFlags,lpDDSurfaceDesc,lpContext,lpEnumModesCallback);
+
+  DDSURFACEDESC desc;
+  ZeroMemory(&desc,sizeof(DDSURFACEDESC));
+  desc.dwSize = sizeof(DDSURFACEDESC);
+
+  desc.dwWidth = 320;
+  desc.dwHeight = 200;
+  desc.ddpfPixelFormat.dwRGBBitCount = 32;
+  lpEnumModesCallback(&desc,lpContext);
+
+  desc.dwWidth = 320;
+  desc.dwHeight = 240;
+  desc.ddpfPixelFormat.dwRGBBitCount = 32;
+  lpEnumModesCallback(&desc,lpContext);
+
+  desc.dwWidth = 512;
+  desc.dwHeight = 384;
+  desc.ddpfPixelFormat.dwRGBBitCount = 32;
+  lpEnumModesCallback(&desc,lpContext);
+
+  return h;
 }
 
 static HRESULT __stdcall Mine_DDraw_SetDisplayMode(IDirectDraw *dd,DWORD dwWidth,DWORD dwHeight,DWORD dwBPP)
@@ -275,6 +328,18 @@ static HRESULT __stdcall Mine_DDrawSurface_QueryInterface(IUnknown *dd,REFIID ii
 static HRESULT __stdcall Mine_DDrawSurface_Flip(IUnknown *me,IUnknown *other,DWORD flags)
 {
   return Real_DDrawSurface_Flip(me,other,flags);
+}
+
+static HRESULT __stdcall Mine_DDrawSurface_GetSurfaceDesc(IUnknown *me,LPDDSURFACEDESC desc)
+{
+  HRESULT h = Real_DDrawSurface_GetSurfaceDesc(me,desc);
+  if (desc->dwWidth == dwNewWidth && desc->dwHeight == dwNewHeight)
+  {
+    desc->lPitch = dwOriginalWidth * (dwOriginalBPP / 8);
+    desc->dwWidth = dwOriginalWidth;
+    desc->dwHeight = dwOriginalHeight;
+  }
+  return h;
 }
 
 static HRESULT __stdcall Mine_DDrawSurface_Lock(IUnknown *me,LPRECT rect,LPDDSURFACEDESC desc,DWORD flags,HANDLE hnd)
@@ -297,6 +362,11 @@ static HRESULT __stdcall Mine_DDraw2_QueryInterface(IUnknown *dd,REFIID iid,LPVO
 
 static HRESULT __stdcall Mine_DDraw2_CreateSurface(IDirectDraw2 *dd,LPDDSURFACEDESC ddsd,LPDIRECTDRAWSURFACE *pSurf,IUnknown *pUnkOuter)
 {
+  if ((ddsd->dwFlags & DDSD_WIDTH) && ddsd->dwWidth == dwOriginalWidth)
+    ddsd->dwWidth = dwNewWidth;
+  if ((ddsd->dwFlags & DDSD_HEIGHT) && ddsd->dwHeight == dwOriginalHeight)
+    ddsd->dwHeight = dwNewHeight;
+
   HRESULT hr = Real_DDraw2_CreateSurface(dd,ddsd,pSurf,pUnkOuter);
   if(SUCCEEDED(hr))
   {
@@ -311,6 +381,32 @@ static HRESULT __stdcall Mine_DDraw2_SetCooperativeLevel(IDirectDraw *dd,HWND hW
   hwOriginal = hWnd;
   ResizeMainWindow();
   return Real_DDraw2_SetCooperativeLevel(dd,hWnd,dwFlags);
+}
+
+static HRESULT __stdcall Mine_DDraw2_EnumDisplayModes(IDirectDraw *dd,DWORD dwFlags, LPDDSURFACEDESC lpDDSurfaceDesc, LPVOID lpContext, LPDDENUMMODESCALLBACK lpEnumModesCallback)
+{
+  HRESULT h = Real_DDraw2_EnumDisplayModes(dd,dwFlags,lpDDSurfaceDesc,lpContext,lpEnumModesCallback);
+
+  DDSURFACEDESC desc;
+  ZeroMemory(&desc,sizeof(DDSURFACEDESC));
+  desc.dwSize = sizeof(DDSURFACEDESC);
+
+  desc.dwWidth = 320;
+  desc.dwHeight = 200;
+  desc.ddpfPixelFormat.dwRGBBitCount = 32;
+  lpEnumModesCallback(&desc,lpContext);
+
+  desc.dwWidth = 320;
+  desc.dwHeight = 240;
+  desc.ddpfPixelFormat.dwRGBBitCount = 32;
+  lpEnumModesCallback(&desc,lpContext);
+
+  desc.dwWidth = 512;
+  desc.dwHeight = 384;
+  desc.ddpfPixelFormat.dwRGBBitCount = 32;
+  lpEnumModesCallback(&desc,lpContext);
+
+  return h;
 }
 
 static HRESULT __stdcall Mine_DDraw2_SetDisplayMode(IDirectDraw *dd,DWORD dwWidth,DWORD dwHeight,DWORD dwBPP,DWORD dwRefreshRate,DWORD dwFlags)
@@ -329,6 +425,18 @@ static HRESULT __stdcall Mine_DDrawSurface2_QueryInterface(IUnknown *dd,REFIID i
 static HRESULT __stdcall Mine_DDrawSurface2_Flip(IUnknown *me,IUnknown *other,DWORD flags)
 {
   return Real_DDrawSurface2_Flip(me,other,flags);
+}
+
+static HRESULT __stdcall Mine_DDrawSurface2_GetSurfaceDesc(IUnknown *me,LPDDSURFACEDESC desc)
+{
+  HRESULT h = Real_DDrawSurface2_GetSurfaceDesc(me,desc);
+  if (desc->dwWidth == dwNewWidth && desc->dwHeight == dwNewHeight)
+  {
+    desc->lPitch = dwOriginalWidth * (dwOriginalBPP / 8);
+    desc->dwWidth = dwOriginalWidth;
+    desc->dwHeight = dwOriginalHeight;
+  }
+  return h;
 }
 
 static HRESULT __stdcall Mine_DDrawSurface2_Lock(IUnknown *me,LPRECT rect,LPDDSURFACEDESC desc,DWORD flags,HANDLE hnd)
@@ -354,6 +462,18 @@ static HRESULT __stdcall Mine_DDrawSurface3_Flip(IUnknown *me,IUnknown *other,DW
   return Real_DDrawSurface3_Flip(me,other,flags);
 }
 
+static HRESULT __stdcall Mine_DDrawSurface3_GetSurfaceDesc(IUnknown *me,LPDDSURFACEDESC desc)
+{
+  HRESULT h = Real_DDrawSurface3_GetSurfaceDesc(me,desc);
+  if (desc->dwWidth == dwNewWidth && desc->dwHeight == dwNewHeight)
+  {
+    desc->lPitch = dwOriginalWidth * (dwOriginalBPP / 8);
+    desc->dwWidth = dwOriginalWidth;
+    desc->dwHeight = dwOriginalHeight;
+  }
+  return h;
+}
+
 static HRESULT __stdcall Mine_DDrawSurface3_Lock(IUnknown *me,LPRECT rect,LPDDSURFACEDESC desc,DWORD flags,HANDLE hnd)
 {
   LockAndAllocate(desc);
@@ -377,6 +497,31 @@ static HRESULT __stdcall Mine_DDraw4_SetCooperativeLevel(IDirectDraw *dd,HWND hW
   ResizeMainWindow();
   return Real_DDraw4_SetCooperativeLevel(dd,hWnd,dwFlags);
 }
+static HRESULT __stdcall Mine_DDraw4_EnumDisplayModes(IDirectDraw *dd,DWORD dwFlags, LPDDSURFACEDESC2 lpDDSurfaceDesc2, LPVOID lpContext, LPDDENUMMODESCALLBACK2 lpEnumModesCallback)
+{
+  HRESULT h = Real_DDraw4_EnumDisplayModes(dd,dwFlags,lpDDSurfaceDesc2,lpContext,lpEnumModesCallback);
+
+  DDSURFACEDESC2 desc;
+  ZeroMemory(&desc,sizeof(DDSURFACEDESC2));
+  desc.dwSize = sizeof(DDSURFACEDESC2);
+
+  desc.dwWidth = 320;
+  desc.dwHeight = 200;
+  desc.ddpfPixelFormat.dwRGBBitCount = 32;
+  lpEnumModesCallback(&desc,lpContext);
+
+  desc.dwWidth = 320;
+  desc.dwHeight = 240;
+  desc.ddpfPixelFormat.dwRGBBitCount = 32;
+  lpEnumModesCallback(&desc,lpContext);
+
+  desc.dwWidth = 512;
+  desc.dwHeight = 384;
+  desc.ddpfPixelFormat.dwRGBBitCount = 32;
+  lpEnumModesCallback(&desc,lpContext);
+
+  return h;
+}
 static HRESULT __stdcall Mine_DDraw4_SetDisplayMode(IDirectDraw *dd,DWORD dwWidth,DWORD dwHeight,DWORD dwBPP,DWORD dwRefreshRate,DWORD dwFlags)
 {
   ModifyResolution(&dwWidth,&dwHeight);
@@ -387,6 +532,11 @@ static HRESULT __stdcall Mine_DDraw4_SetDisplayMode(IDirectDraw *dd,DWORD dwWidt
 
 static HRESULT __stdcall Mine_DDraw4_CreateSurface(IDirectDraw4 *dd,LPDDSURFACEDESC2 ddsd,LPDIRECTDRAWSURFACE4 *pSurf,IUnknown *pUnkOuter)
 {
+  if ((ddsd->dwFlags & DDSD_WIDTH) && ddsd->dwWidth == dwOriginalWidth)
+    ddsd->dwWidth = dwNewWidth;
+  if ((ddsd->dwFlags & DDSD_HEIGHT) && ddsd->dwHeight == dwOriginalHeight)
+    ddsd->dwHeight = dwNewHeight;
+
   HRESULT hr = Real_DDraw4_CreateSurface(dd,(LPDDSURFACEDESC) ddsd,(LPDIRECTDRAWSURFACE *) pSurf,pUnkOuter);
   if(SUCCEEDED(hr))
   {
@@ -404,6 +554,18 @@ static HRESULT __stdcall Mine_DDrawSurface4_QueryInterface(IUnknown *dd,REFIID i
 static HRESULT __stdcall Mine_DDrawSurface4_Flip(IUnknown *me,IUnknown *other,DWORD flags)
 {
   return Real_DDrawSurface4_Flip(me,other,flags);
+}
+
+static HRESULT __stdcall Mine_DDrawSurface4_GetSurfaceDesc(IUnknown *me,LPDDSURFACEDESC2 desc)
+{
+  HRESULT h = Real_DDrawSurface4_GetSurfaceDesc(me,desc);
+  if (desc->dwWidth == dwNewWidth && desc->dwHeight == dwNewHeight)
+  {
+    desc->lPitch = dwOriginalWidth * (dwOriginalBPP / 8);
+    desc->dwWidth = dwOriginalWidth;
+    desc->dwHeight = dwOriginalHeight;
+  }
+  return h;
 }
 
 static HRESULT __stdcall Mine_DDrawSurface4_Lock(IUnknown *me,LPRECT rect,LPDDSURFACEDESC desc,DWORD flags,HANDLE hnd)
@@ -430,6 +592,30 @@ static HRESULT __stdcall Mine_DDraw7_SetCooperativeLevel(IDirectDraw *dd,HWND hW
   ResizeMainWindow();
   return Real_DDraw7_SetCooperativeLevel(dd,hWnd,dwFlags);
 }
+static HRESULT __stdcall Mine_DDraw7_EnumDisplayModes(IDirectDraw *dd,DWORD dwFlags, LPDDSURFACEDESC2 lpDDSurfaceDesc2, LPVOID lpContext, LPDDENUMMODESCALLBACK2 lpEnumModesCallback)
+{
+  HRESULT h = Real_DDraw7_EnumDisplayModes(dd,dwFlags,lpDDSurfaceDesc2,lpContext,lpEnumModesCallback);
+
+  DDSURFACEDESC2 desc;
+  ZeroMemory(&desc,sizeof(DDSURFACEDESC2));
+  desc.dwSize = sizeof(DDSURFACEDESC2);
+
+  desc.dwWidth = 320;
+  desc.dwHeight = 200;
+  desc.ddpfPixelFormat.dwRGBBitCount = 32;
+  lpEnumModesCallback(&desc,lpContext);
+
+  desc.dwWidth = 320;
+  desc.dwHeight = 240;
+  desc.ddpfPixelFormat.dwRGBBitCount = 32;
+  lpEnumModesCallback(&desc,lpContext);
+
+  desc.dwWidth = 512;
+  desc.dwHeight = 384;
+  desc.ddpfPixelFormat.dwRGBBitCount = 32;
+  lpEnumModesCallback(&desc,lpContext);
+
+  return h;}
 static HRESULT __stdcall Mine_DDraw7_SetDisplayMode(IDirectDraw *dd,DWORD dwWidth,DWORD dwHeight,DWORD dwBPP,DWORD dwRefreshRate,DWORD dwFlags)
 {
   ModifyResolution(&dwWidth,&dwHeight);
@@ -440,6 +626,11 @@ static HRESULT __stdcall Mine_DDraw7_SetDisplayMode(IDirectDraw *dd,DWORD dwWidt
 
 static HRESULT __stdcall Mine_DDraw7_CreateSurface(IDirectDraw7 *dd,LPDDSURFACEDESC2 ddsd,LPDIRECTDRAWSURFACE7 *pSurf,IUnknown *pUnkOuter)
 {
+  if ((ddsd->dwFlags & DDSD_WIDTH) && ddsd->dwWidth == dwOriginalWidth)
+    ddsd->dwWidth = dwNewWidth;
+  if ((ddsd->dwFlags & DDSD_HEIGHT) && ddsd->dwHeight == dwOriginalHeight)
+    ddsd->dwHeight = dwNewHeight;
+
   HRESULT hr = Real_DDraw7_CreateSurface(dd,(LPDDSURFACEDESC) ddsd,(LPDIRECTDRAWSURFACE *) pSurf,pUnkOuter);
   if(SUCCEEDED(hr))
   {
@@ -457,6 +648,18 @@ static HRESULT __stdcall Mine_DDrawSurface7_QueryInterface(IUnknown *dd,REFIID i
 static HRESULT __stdcall Mine_DDrawSurface7_Flip(IUnknown *me,IUnknown *other,DWORD flags)
 {
   return Real_DDrawSurface7_Flip(me,other,flags);
+}
+
+static HRESULT __stdcall Mine_DDrawSurface7_GetSurfaceDesc(IUnknown *me,LPDDSURFACEDESC2 desc)
+{
+  HRESULT h = Real_DDrawSurface7_GetSurfaceDesc(me,desc);
+  if (desc->dwWidth == dwNewWidth && desc->dwHeight == dwNewHeight)
+  {
+    desc->lPitch = dwOriginalWidth * (dwOriginalBPP / 8);
+    desc->dwWidth = dwOriginalWidth;
+    desc->dwHeight = dwOriginalHeight;
+  }
+  return h;
 }
 
 static HRESULT __stdcall Mine_DDrawSurface7_Lock(IUnknown *me,LPRECT rect,LPDDSURFACEDESC desc,DWORD flags,HANDLE hnd)
@@ -479,6 +682,7 @@ static void PatchDDrawInterface(IUnknown *dd,int version)
 #define DDRAW_HOOKS(ver) \
   HookCOMOnce(&Real_DDraw ## ver ## QueryInterface,       dd, 0,  Mine_DDraw ## ver ## QueryInterface); \
   HookCOMOnce(&Real_DDraw ## ver ## CreateSurface,        dd, 6,  (PDDraw_CreateSurface)  Mine_DDraw ## ver ## CreateSurface); \
+  HookCOMOnce(&Real_DDraw ## ver ## EnumDisplayModes,     dd, 8,  (PDDraw ## ver ## EnumDisplayModes)  Mine_DDraw ## ver ## EnumDisplayModes); \
   HookCOMOnce(&Real_DDraw ## ver ## SetCooperativeLevel,  dd, 20, (PDDraw_SetCooperativeLevel)  Mine_DDraw ## ver ## SetCooperativeLevel); \
   HookCOMOnce(&Real_DDraw ## ver ## SetDisplayMode,       dd, 21, (PDDraw ## ver ## SetDisplayMode) Mine_DDraw ## ver ## SetDisplayMode)
 
@@ -500,6 +704,7 @@ static void PatchDDrawSurface(IUnknown *dd,int version)
 #define DDRAW_SURFACE_HOOKS(ver) \
   HookCOMOnce(&Real_DDrawSurface ## ver ## QueryInterface,  dd,  0, Mine_DDrawSurface ## ver ## QueryInterface); \
   HookCOMOnce(&Real_DDrawSurface ## ver ## Flip,            dd, 11, Mine_DDrawSurface ## ver ## Flip); \
+  HookCOMOnce(&Real_DDrawSurface ## ver ## GetSurfaceDesc,  dd, 22, Mine_DDrawSurface ## ver ## GetSurfaceDesc); \
   HookCOMOnce(&Real_DDrawSurface ## ver ## Lock,            dd, 25, Mine_DDrawSurface ## ver ## Lock); \
   HookCOMOnce(&Real_DDrawSurface ## ver ## Unlock,          dd, 32, Mine_DDrawSurface ## ver ## Unlock)
 
