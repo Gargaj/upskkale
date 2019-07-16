@@ -8,6 +8,7 @@
 #define IDC_ARGUMENTS                   1003
 #define IDC_TARGET                      1004
 #define IDC_BTARGET                     1005
+#define IDC_ARGUMENTS3                  1005
 #define IDC_FRAMERATE                   1008
 #define IDC_ENCODER                     1010
 #define IDC_VIDEOCODEC                  1014
@@ -32,6 +33,8 @@
 #define IDC_EXTRASCREENWIDTH            1031
 #define IDC_EXTRASCREENHEIGHT           1032
 #define IDC_EXTRASCREENX                1033
+#define IDC_MINIMUMWIDTH                1034
+#define IDC_MINIMUMHEIGHT               1035
 
 // Next default values for new objects
 // 

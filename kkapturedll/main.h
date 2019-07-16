@@ -51,6 +51,8 @@ struct ParameterBlock
 {
   unsigned VersionTag;
   TCHAR FileName[_MAX_PATH];
+  unsigned int MinimumWidth;
+  unsigned int MinimumHeight;
   int UpscaleMultiplier;
 
   BOOL IsDebugged;

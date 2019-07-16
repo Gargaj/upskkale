@@ -140,7 +140,7 @@ void ModifyResolution( DWORD* dwWidth, DWORD* dwHeight )
   dwOriginalHeight = *dwHeight;
 
   printLog("current resolution: %d * %d\n",*dwWidth,*dwHeight);
-  if (*dwWidth < 640 || *dwHeight < 480)
+  if (*dwWidth < params.MinimumWidth || *dwHeight <= params.MinimumHeight)
   {
     *dwWidth  = dwNewWidth  = GetSystemMetrics( SM_CXSCREEN ); // TODO: parameter from setup box?
     *dwHeight = dwNewHeight = GetSystemMetrics( SM_CYSCREEN );
@@ -159,6 +159,10 @@ void ModifyResolution( DWORD* dwWidth, DWORD* dwHeight )
     ResizeMainWindow();
 
     printLog("scaled resolution: %d * %d\n",*dwWidth,*dwHeight);
+  }
+  else
+  {
+    printLog("resolution is over or equal to minimum (%d * %d), not scaling\n",params.MinimumWidth,params.MinimumHeight);
   }
 }
 

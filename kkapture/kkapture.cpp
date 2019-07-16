@@ -96,6 +96,9 @@ static INT_PTR CALLBACK MainDialogProc(HWND hWndDlg,UINT uMsg,WPARAM wParam,LPAR
       GetWindowRect(hWndDlg,&rcDlg);
       SetWindowPos(hWndDlg,0,(rcWork.left+rcWork.right-rcDlg.right+rcDlg.left)/2,
         (rcWork.top+rcWork.bottom-rcDlg.bottom+rcDlg.top)/2,-1,-1,SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+
+      SetDlgItemInt(hWndDlg,IDC_MINIMUMWIDTH ,GetSystemMetrics(SM_CXSCREEN),false);
+      SetDlgItemInt(hWndDlg,IDC_MINIMUMHEIGHT,GetSystemMetrics(SM_CYSCREEN),false);
     }
     return TRUE;
 
@@ -109,6 +112,8 @@ static INT_PTR CALLBACK MainDialogProc(HWND hWndDlg,UINT uMsg,WPARAM wParam,LPAR
     case IDOK:
       {
         Params.VersionTag = PARAMVERSION;
+        Params.MinimumWidth = GetDlgItemInt(hWndDlg,IDC_MINIMUMWIDTH,NULL,false);
+        Params.MinimumHeight = GetDlgItemInt(hWndDlg,IDC_MINIMUMHEIGHT,NULL,false);
 
         GetDlgItemText(hWndDlg,IDC_DEMO,ExeName,_MAX_PATH);
         GetDlgItemText(hWndDlg,IDC_ARGUMENTS,Arguments,MAX_ARGS);

@@ -24,19 +24,23 @@ LANGUAGE LANG_NEUTRAL, SUBLANG_SYS_DEFAULT
 // Dialog
 //
 
-IDD_MAINWIN DIALOGEX 0, 0, 258, 82
+IDD_MAINWIN DIALOGEX 0, 0, 258, 98
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION ".upskkale 0.1"
+CAPTION ".upskkale 0.2"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    DEFPUSHBUTTON   "upskkale!",IDOK,149,61,50,14
-    PUSHBUTTON      "Exit",IDCANCEL,201,61,50,14
+    DEFPUSHBUTTON   "upskkale!",IDOK,149,79,50,14
+    PUSHBUTTON      "Exit",IDCANCEL,201,79,50,14
     EDITTEXT        IDC_DEMO,51,7,146,13,ES_AUTOHSCROLL
     LTEXT           "Demo:",IDC_STATIC,9,9,22,8
     PUSHBUTTON      "Browse...",IDC_BDEMO,201,7,50,13
     EDITTEXT        IDC_ARGUMENTS,51,23,146,13,ES_AUTOHSCROLL
     LTEXT           "Arguments:",IDC_STATIC,9,25,38,8
-    CTEXT           "Based on the original .kkapture code by Fabian ""ryg/fr"" Giesen",IDC_STATIC,6,42,246,12
+    CTEXT           "Based on the original .kkapture code by Fabian ""ryg/fr"" Giesen",IDC_STATIC,6,60,246,12
+    EDITTEXT        IDC_MINIMUMWIDTH,84,39,30,13,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Minimum resolution:",IDC_STATIC,9,42,64,8
+    EDITTEXT        IDC_MINIMUMHEIGHT,126,39,30,13,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "x",IDC_STATIC,118,41,8,8
 END
 
 
@@ -53,7 +57,7 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 251
         TOPMARGIN, 7
-        BOTTOMMARGIN, 75
+        BOTTOMMARGIN, 91
     END
 END
 #endif    // APSTUDIO_INVOKED
